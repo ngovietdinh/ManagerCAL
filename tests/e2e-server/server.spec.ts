@@ -19,6 +19,22 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/#\/login/);
 }
 
+// Điền số liệu biên bản đầu đo COD: điểm "0" đọc 0; ba điểm kiểm đọc đúng giá trị chuẩn (100 / 250 / 400 mg/L);
+// lặp lại, độ trôi đọc 250 so với chuẩn 250 → sai số 0, tuyến tính R² = 1.
+const valueFor = (label: string) => (/Điểm “0”/.test(label) ? "0" : /Điểm 1/.test(label) ? "100" : /Điểm 3/.test(label) ? "400" : "250");
+async function fillRecord(page: Page) {
+  await page.getByLabel("Nhiệt độ °C").fill("25");
+  await page.getByLabel("Độ ẩm %RH").fill("60");
+  const cells = page.locator("input.input-sm");
+  await expect(cells.first()).toBeVisible();
+  const n = await cells.count();
+  expect(n).toBeGreaterThan(10);
+  for (let i = 0; i < n; i++) {
+    const c = cells.nth(i);
+    await c.fill(valueFor((await c.getAttribute("aria-label")) ?? ""));
+  }
+}
+
 let jobUrl = "";
 let certNumber = "";
 
@@ -48,17 +64,15 @@ test("sai mật khẩu bị từ chối", async ({ page }) => {
 test("KĐV nhập biên bản và nộp → dữ liệu lưu trên máy chủ", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await login(page, "cuong@kdviet.vn");
+  await login(page, "cuong@kdqtviet.vn");
   await page.goto("/#/jobs");
-  await page.locator("tr", { hasText: "Xăng dầu Hoàng Gia" }).filter({ hasText: "Đã phân công" }).first().click();
+  await page.locator("tr", { hasText: "KCN Tân Phú Thịnh" }).filter({ hasText: "Đã phân công" }).filter({ hasText: "COD" }).first().click();
   await expect(page).toHaveURL(/#\/jobs\/.+/);
   jobUrl = page.url();
-  await page.locator("label", { hasText: "CH-DT-02" }).locator("input[type=checkbox]").check();
+  await page.locator("label", { hasText: "CH-QTN-02" }).locator("input[type=checkbox]").check();
   await expect(page.getByRole("button", { name: "Đạt", exact: true }).first()).toBeVisible();
   for (const b of await page.getByRole("button", { name: "Đạt", exact: true }).all()) await b.click();
-  const cells = page.locator("input.input-sm");
-  await expect(cells.first()).toBeVisible();
-  for (let i = 0; i < await cells.count(); i++) await cells.nth(i).fill(i % 2 ? "0,12" : "-0,08");
+  await fillRecord(page);
   await page.getByRole("button", { name: "Nộp soát xét" }).click();
   await expect(page.getByText("Đã nộp soát xét")).toBeVisible();
   expect(errors).toEqual([]);
@@ -67,7 +81,7 @@ test("KĐV nhập biên bản và nộp → dữ liệu lưu trên máy chủ", 
 test("trình duyệt khác (người soát xét) thấy ngay phiếu vừa nộp và đồng ý", async ({ browser }) => {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  await login(page, "dung@kdviet.vn");
+  await login(page, "dung@kdqtviet.vn");
   await page.goto(jobUrl.replace(/^.*#/, "/#"));
   await expect(page.locator("main")).toContainText("Chờ soát xét");
   const review = page.locator("section", { hasText: "Soát xét biên bản" });
@@ -88,7 +102,7 @@ test("giám đốc ký phát hành GCN có tem", async ({ page }) => {
   await expect(page.locator(".doc")).toContainText("GIẤY CHỨNG NHẬN KIỂM ĐỊNH");
   await expect(page.locator(".doc")).toContainText("Công ty Kiểm định Thử");
   // phiếu làm tại hiện trường → nơi kiểm định là địa chỉ khách
-  await expect(page.locator(".doc")).toContainText("Nơi kiểm địnhKm 9 QL5", { useInnerText: false });
+  await expect(page.locator(".doc")).toContainText("Nơi kiểm địnhKCN Tân Phú Thịnh", { useInnerText: false });
   certNumber = (await page.locator(".doc").innerText()).match(/Số:\s*(\S+)/)![1];
   await logout(page);
 });

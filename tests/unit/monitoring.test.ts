@@ -93,7 +93,7 @@ describe("thư viện quan trắc tự động", () => {
   it("dữ liệu mẫu: GCN đầu đo pH có tem; biên bản RA không có tem", async () => {
     const repo = new LocalRepo({ memoryOnly: true });
     await seedDemo(repo);
-    const certs = await repo.list("certificates", { where: { customer_id: "c-9" } });
+    const certs = await repo.list("certificates", { where: { customer_id: "c-1" } });
     const ra = certs.find((c) => c.snapshot.procedure?.doc_kind === "ra_report")!;
     const ph = certs.find((c) => c.snapshot.procedure?.code === "ĐLVN 381:2021")!;
     expect(ra.kind).toBe("certificate");

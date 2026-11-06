@@ -19,7 +19,7 @@ npm install
 npm run dev        # mở http://localhost:5173
 ```
 
-`npm run dev` chạy **chế độ demo**: không cần máy chủ, dữ liệu mẫu của một công ty hư cấu nằm trong trình duyệt. Chọn một người ở màn hình đăng nhập để vào với vai trò của người đó.
+`npm run dev` chạy **chế độ demo**: không cần máy chủ, dữ liệu mẫu nằm trong trình duyệt: một công ty kiểm định thiết bị quan trắc môi trường tự động (hư cấu) với 6 khách hàng có trạm quan trắc nước thải, khí thải, không khí xung quanh; đơn hàng ở mọi trạng thái, GCN đầu đo, thông báo không đạt, biên bản kiểm tra RA. Chọn một người ở màn hình đăng nhập để vào với vai trò của người đó.
 
 **Dùng thật (nhiều người, dữ liệu chung):** đưa lên Cloudflare – một Worker phục vụ giao diện + API, dữ liệu trong **Cloudflare D1**, đăng nhập email/mật khẩu, quy tắc nghiệp vụ kiểm tra trên máy chủ. Xem [docs/TRIEN_KHAI.md](docs/TRIEN_KHAI.md). Chạy thử bản máy chủ tại máy: `npm run dev:cf`.
 

@@ -82,7 +82,7 @@ function SetupForm() {
         <Field label="Nhập lại mật khẩu *"><Input type="password" autoComplete="new-password" value={f.password2} onChange={(e) => set({ password2: e.target.value })} required minLength={8} /></Field>
       </div>
       <Checkbox checked={f.demo} onChange={(v) => set({ demo: v })} className="min-h-7"
-        label={<span>Nạp dữ liệu mẫu để dùng thử <span className="block text-xs text-slate-500">7 nhân viên mẫu, khách hàng, đơn hàng, GCN. Bạn đăng nhập bằng email trên; nhân viên mẫu dùng email @kdviet.vn với cùng mật khẩu. Dùng thật thì bỏ chọn.</span></span>} />
+        label={<span>Nạp dữ liệu mẫu để dùng thử <span className="block text-xs text-slate-500">7 nhân viên mẫu, 6 khách hàng có trạm quan trắc tự động, đơn hàng, GCN, biên bản RA. Bạn đăng nhập bằng email trên; nhân viên mẫu dùng email @kdqtviet.vn với cùng mật khẩu. Dùng thật thì bỏ chọn.</span></span>} />
       {err && <p className="text-sm text-red-700 dark:text-red-300">{err}</p>}
       <Button type="submit" size="lg" loading={busy}>Khởi tạo và đăng nhập</Button>
     </form>

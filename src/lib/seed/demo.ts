@@ -1,7 +1,8 @@
 // =============================================================================
-// DỮ LIỆU DEMO – một công ty kiểm định giả định với đơn hàng ở đủ trạng thái.
+// DỮ LIỆU DEMO – một công ty kiểm định THIẾT BỊ QUAN TRẮC MÔI TRƯỜNG TỰ ĐỘNG (hư cấu),
+// khách hàng là nhà máy, khu công nghiệp, bệnh viện, trung tâm quan trắc có trạm tự động, liên tục.
 // Chạy qua lớp nghiệp vụ (Services) để có lịch sử, nhật ký, thông báo thật.
-// Tên người, công ty đều hư cấu.
+// Tên người, công ty, số sê-ri đều hư cấu.
 // =============================================================================
 import { dayjs } from "../format";
 import { mpeAt } from "../calc";
@@ -9,7 +10,8 @@ import type { Authorization, Branch, Customer, Device, JobKind, Readings, Standa
 import { Services } from "../services";
 import type { Repo } from "../store/repo";
 import { nowIso } from "../store/repo";
-import { DEFAULT_SETTINGS, FIELDS, INSTRUMENT_TYPES, PROCEDURES } from "./catalog";
+import { DEFAULT_SETTINGS } from "./catalog";
+import { FIELDS_QT, INSTRUMENT_TYPES_QT, PROCEDURES_QT } from "./monitoring";
 
 /** Dữ liệu mẫu được dựng lúc gọi (không dựng khi nạp mã: Cloudflare Workers cấm sinh số ngẫu nhiên
  *  và đứng đồng hồ ở phạm vi toàn cục, nên ngày tháng phải tính tại thời điểm nạp). */
@@ -17,114 +19,123 @@ export function buildDemo() {
   const t = nowIso();
   const d = (daysFromNow: number) => dayjs().add(daysFromNow, "day").format("YYYY-MM-DD");
 
+  const DEMO_COMPANY = {
+    ...DEFAULT_SETTINGS.company,
+    name: "Công ty TNHH Kiểm định Quan trắc Môi trường Việt", short_name: "KĐ QT Việt",
+    address: "Số 12 Nguyễn Văn Cừ, Long Biên, Hà Nội", email: "info@kdqtviet.vn", lab_code: "KĐQT",
+  };
+
   const DEMO_BRANCHES: Branch[] = [
     { id: "br-hn", code: "HN", name: "Trụ sở Hà Nội", address: "Số 12 Nguyễn Văn Cừ, Long Biên, Hà Nội", active: true, created_at: t },
     { id: "br-hcm", code: "HCM", name: "Chi nhánh TP. Hồ Chí Minh", address: "45 Lê Văn Việt, TP. Thủ Đức, TP. HCM", active: true, created_at: t },
   ];
 
+  const u = (id: string, code: string, full_name: string, email: string, roles: User["roles"], title: string, card: string | null, cardDays: number | null, branch = "br-hn"): User => ({
+    id, code, full_name, email, phone: null, roles, branch_id: branch, title, inspector_card_no: card,
+    inspector_card_expiry: cardDays == null ? null : d(cardDays), active: true, created_at: t,
+  });
   const DEMO_USERS: User[] = [
-    { id: "u-an", code: "NV01", full_name: "Nguyễn Văn An", email: "an@kdviet.vn", phone: "0901 000 001", roles: ["admin", "director", "signer"], branch_id: "br-hn", title: "Giám đốc", inspector_card_no: "KĐV-0101", inspector_card_expiry: d(700), active: true, created_at: t },
-    { id: "u-binh", code: "NV02", full_name: "Trần Thị Bình", email: "binh@kdviet.vn", phone: "0901 000 002", roles: ["technician"], branch_id: "br-hn", title: "Kiểm định viên", inspector_card_no: "KĐV-0215", inspector_card_expiry: d(400), active: true, created_at: t },
-    { id: "u-cuong", code: "NV03", full_name: "Lê Minh Cường", email: "cuong@kdviet.vn", phone: "0901 000 003", roles: ["technician", "reviewer"], branch_id: "br-hn", title: "Kiểm định viên chính", inspector_card_no: "KĐV-0188", inspector_card_expiry: d(45), active: true, created_at: t },
-    { id: "u-dung", code: "NV04", full_name: "Phạm Thu Dung", email: "dung@kdviet.vn", phone: "0901 000 004", roles: ["reviewer", "signer", "qa"], branch_id: "br-hn", title: "Trưởng phòng Kỹ thuật", inspector_card_no: "KĐV-0150", inspector_card_expiry: d(900), active: true, created_at: t },
-    { id: "u-em", code: "NV05", full_name: "Hoàng Văn Em", email: "em@kdviet.vn", phone: "0901 000 005", roles: ["intake", "sales"], branch_id: "br-hn", title: "Nhân viên tiếp nhận", inspector_card_no: null, inspector_card_expiry: null, active: true, created_at: t },
-    { id: "u-giang", code: "NV06", full_name: "Vũ Thị Giang", email: "giang@kdviet.vn", phone: "0901 000 006", roles: ["accountant"], branch_id: "br-hn", title: "Kế toán", inspector_card_no: null, inspector_card_expiry: null, active: true, created_at: t },
-    { id: "u-hung", code: "NV07", full_name: "Đỗ Văn Hùng", email: "hung@kdviet.vn", phone: "0901 000 007", roles: ["technician"], branch_id: "br-hcm", title: "Kiểm định viên", inspector_card_no: "KĐV-0302", inspector_card_expiry: d(300), active: true, created_at: t },
+    u("u-an", "NV01", "Nguyễn Văn An", "an@kdqtviet.vn", ["admin", "director", "signer"], "Giám đốc", "KĐV-0101", 700),
+    u("u-binh", "NV02", "Trần Thị Bình", "binh@kdqtviet.vn", ["technician"], "Kiểm định viên – quan trắc nước", "KĐV-0215", 400),
+    u("u-cuong", "NV03", "Lê Minh Cường", "cuong@kdqtviet.vn", ["technician", "reviewer"], "Kiểm định viên chính", "KĐV-0188", 45),
+    u("u-dung", "NV04", "Phạm Thu Dung", "dung@kdqtviet.vn", ["reviewer", "signer", "qa"], "Trưởng phòng Kỹ thuật", "KĐV-0150", 900),
+    u("u-em", "NV05", "Hoàng Văn Em", "em@kdqtviet.vn", ["intake", "sales"], "Nhân viên kinh doanh, tiếp nhận", null, null),
+    u("u-giang", "NV06", "Vũ Thị Giang", "giang@kdqtviet.vn", ["accountant"], "Kế toán", null, null),
+    u("u-hung", "NV07", "Đỗ Văn Hùng", "hung@kdqtviet.vn", ["technician"], "Kiểm định viên – khí thải", "KĐV-0302", 300, "br-hcm"),
   ];
 
   const auth = (user_id: string, fields: string[], roles: Authorization["role"][]): Authorization[] =>
-    fields.flatMap((field_id) => roles.map((role) => ({ id: `a-${user_id}-${field_id}-${role}`, user_id, field_id, role, decision_no: "15/QĐ-KĐV", valid_from: "2025-01-01", valid_to: null, created_at: t })));
-
+    fields.flatMap((field_id) => roles.map((role) => ({ id: `a-${user_id}-${field_id}-${role}`, user_id, field_id, role, decision_no: "15/QĐ-KĐQT", valid_from: "2025-01-01", valid_to: null, created_at: t })));
   const DEMO_AUTHS: Authorization[] = [
-    ...auth("u-an", ["f-kl", "f-as", "f-nd", "f-dt", "f-di", "f-dl"], ["sign", "review"]),
-    ...auth("u-binh", ["f-kl", "f-as", "f-nd"], ["perform"]),
-    ...auth("u-cuong", ["f-kl", "f-di", "f-dt", "f-dl"], ["perform", "review"]),
-    ...auth("u-dung", ["f-kl", "f-as", "f-nd", "f-dt", "f-di", "f-dl"], ["review", "sign"]),
-    ...auth("u-hung", ["f-kl", "f-as", "f-dt"], ["perform"]),
-    // quan trắc môi trường tự động
     ...auth("u-an", ["f-qtn", "f-qtk"], ["sign", "review"]),
+    ...auth("u-binh", ["f-qtn"], ["perform"]),
     ...auth("u-cuong", ["f-qtn", "f-qtk"], ["perform"]),
+    ...auth("u-cuong", ["f-qtn"], ["review"]),
     ...auth("u-dung", ["f-qtn", "f-qtk"], ["review", "sign"]),
+    ...auth("u-hung", ["f-qtk"], ["perform"]),
   ];
 
+  const std = (id: string, code: string, name: string, field_id: string, extra: Partial<Standard>): Standard => ({
+    id, code, name, field_id, manufacturer: null, model: null, serial: null, range_text: null, accuracy_text: null, cal_cert_no: null, cal_by: null,
+    cal_date: d(-60), cal_due: d(300), status: "ok", branch_id: "br-hn", note: null, created_at: t, ...extra,
+  });
   const DEMO_STANDARDS: Standard[] = [
-    { id: "s-qc-e2", code: "CH-KL-01", name: "Bộ quả cân chuẩn cấp E2 (1 mg – 200 g)", field_id: "f-kl", manufacturer: "Häfner", model: "E2 set", serial: "E2-4471", range_text: "1 mg – 200 g", accuracy_text: "Cấp E2 (OIML R111)", cal_cert_no: "V01.CN.0231.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-200), cal_due: d(165), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qc-f1", code: "CH-KL-02", name: "Bộ quả cân chuẩn cấp F1 (1 g – 5 kg)", field_id: "f-kl", manufacturer: "Häfner", model: "F1 set", serial: "F1-8812", range_text: "1 g – 5 kg", accuracy_text: "Cấp F1", cal_cert_no: "V01.CN.0232.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-300), cal_due: d(65), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qc-m1", code: "CH-KL-03", name: "Quả cân chuẩn M1 20 kg × 50", field_id: "f-kl", manufacturer: "Việt Nam", model: "M1-20", serial: "Lô 2023", range_text: "20 kg – 1000 kg", accuracy_text: "Cấp M1", cal_cert_no: "V01.CN.1180.24", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-500), cal_due: d(-20), status: "ok", branch_id: "br-hn", note: "Quá hạn – sẽ tự khoá", created_at: t },
-    { id: "s-qc-m1b", code: "CH-KL-04", name: "Quả cân chuẩn M1 20 kg × 60 (xe tải chuẩn)", field_id: "f-kl", manufacturer: "Việt Nam", model: "M1-20", serial: "Lô 2024", range_text: "20 kg – 1200 kg", accuracy_text: "Cấp M1", cal_cert_no: "V01.CN.0410.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-100), cal_due: d(265), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-ap", code: "CH-AS-01", name: "Áp kế chuẩn số", field_id: "f-as", manufacturer: "Fluke", model: "700G08", serial: "3345021", range_text: "0 – 70 bar", accuracy_text: "0,05 % FS", cal_cert_no: "V02.CN.0877.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-150), cal_due: d(215), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-ha", code: "CH-AS-02", name: "Áp kế chuẩn đo huyết áp", field_id: "f-as", manufacturer: "Riester", model: "RBP-100", serial: "RB2210", range_text: "0 – 300 mmHg", accuracy_text: "± 0,5 mmHg", cal_cert_no: "V02.CN.0878.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-150), cal_due: d(215), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-nd", code: "CH-ND-01", name: "Nhiệt kế chuẩn Pt100 + bể ổn nhiệt", field_id: "f-nd", manufacturer: "Fluke", model: "1523 / 7102", serial: "B55121", range_text: "0 – 100 °C", accuracy_text: "± 0,01 °C", cal_cert_no: "V03.CN.0412.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-90), cal_due: d(275), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-dt", code: "CH-DT-01", name: "Bình chuẩn dung tích 20 L hạng 2", field_id: "f-dt", manufacturer: "Việt Nam", model: "BC-20", serial: "BC20-017", range_text: "20 L", accuracy_text: "± 0,05 %", cal_cert_no: "V04.CN.0150.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-60), cal_due: d(305), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-dt2", code: "CH-DT-02", name: "Hệ thống kiểm định đồng hồ nước DN15–DN40", field_id: "f-dt", manufacturer: "Việt Nam", model: "KĐ-ĐHN-40", serial: "HT-01", range_text: "0,01 – 16 m³/h", accuracy_text: "± 0,2 %", cal_cert_no: "V04.CN.0151.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-60), cal_due: d(305), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-di", code: "CH-DI-01", name: "Bàn kiểm công tơ 1 pha 24 vị trí", field_id: "f-di", manufacturer: "MTE", model: "PTS 3.3", serial: "PTS-20198", range_text: "0,05 – 100 A", accuracy_text: "Cấp 0,05", cal_cert_no: "V05.CN.0290.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-120), cal_due: d(245), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-dl", code: "CH-DL-01", name: "Thước chuẩn cấp I 5 m", field_id: "f-dl", manufacturer: "Stabila", model: "BM 50", serial: "DL-5-012", range_text: "0 – 5 m", accuracy_text: "Cấp I", cal_cert_no: "V06.CN.0071.25", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-200), cal_due: d(530), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qt-ph", code: "CH-QT-01", name: "Bộ dung dịch chuẩn pH 4,01 / 7,00 / 10,01 (CRM)", field_id: "f-qtn", manufacturer: "Merck", model: "Certipur", serial: "Lô HC123456", range_text: "pH 4 – 10", accuracy_text: "± 0,02 pH", cal_cert_no: "CoA HC123456", cal_by: "Merck KGaA (ISO 17034)", cal_date: d(-60), cal_due: d(300), status: "ok", branch_id: "br-hn", note: "Chất chuẩn – theo hạn dùng của nhà sản xuất", created_at: t },
-    { id: "s-qt-cod", code: "CH-QT-02", name: "Dung dịch chuẩn COD 1000 mg/L, TSS, amoni (CRM)", field_id: "f-qtn", manufacturer: "Hach", model: "CRM set", serial: "Lô A2210", range_text: "COD 0–1000 mg/L", accuracy_text: "ĐKĐB ≤ 1,5 %", cal_cert_no: "CoA A2210", cal_by: "Hach (ISO 17034)", cal_date: d(-40), cal_due: d(140), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qt-gas", code: "CH-QT-03", name: "Khí chuẩn SO2 / NO / CO trong N2 + khí \u201ckhông\u201d N2 99,999 %", field_id: "f-qtk", manufacturer: "Linde", model: "Bình 40 L", serial: "LG-77310", range_text: "SO2 500 ppm; NO 400 ppm; CO 800 ppm", accuracy_text: "± 2 % tương đối", cal_cert_no: "V02.KC.0311.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-90), cal_due: d(275), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qt-dil", code: "CH-QT-04", name: "Hệ thống pha loãng khí chuẩn", field_id: "f-qtk", manufacturer: "Environics", model: "S-4040", serial: "EN-4040-118", range_text: "Tỉ lệ 1:1 – 1:1000", accuracy_text: "± 1 % giá trị đặt", cal_cert_no: "V02.CN.0950.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-120), cal_due: d(245), status: "ok", branch_id: "br-hn", note: null, created_at: t },
-    { id: "s-qt-iso", code: "CH-QT-05", name: "Bộ lấy mẫu khí thải, bụi đẳng động (quan trắc đối chứng RA)", field_id: "f-qtk", manufacturer: "Apex", model: "XC-572", serial: "APX-5720-09", range_text: "Isokinetic", accuracy_text: "Theo US EPA M5", cal_cert_no: "V02.CN.0951.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-120), cal_due: d(245), status: "ok", branch_id: "br-hn", note: null, created_at: t },
+    std("s-ph", "CH-QTN-01", "Bộ dung dịch chuẩn pH 4,01 / 7,00 / 10,01 (CRM)", "f-qtn", { manufacturer: "Merck", model: "Certipur", serial: "Lô HC123456", range_text: "pH 4 – 10", accuracy_text: "± 0,02 pH", cal_cert_no: "CoA HC123456", cal_by: "Nhà sản xuất (ISO 17034)", note: "Chất chuẩn – theo hạn dùng" }),
+    std("s-ph-cu", "CH-QTN-00", "Bộ dung dịch chuẩn pH lô cũ (CRM)", "f-qtn", { manufacturer: "Merck", model: "Certipur", serial: "Lô HC099887", range_text: "pH 4 – 10", accuracy_text: "± 0,02 pH", cal_cert_no: "CoA HC099887", cal_by: "Nhà sản xuất (ISO 17034)", cal_date: d(-400), cal_due: d(-10), note: "Hết hạn dùng – hệ thống tự khoá" }),
+    std("s-cod", "CH-QTN-02", "Dung dịch chuẩn COD (KHP) 1000 mg/L (CRM)", "f-qtn", { manufacturer: "Hach", serial: "Lô A2210", range_text: "0 – 1000 mg/L", accuracy_text: "ĐKĐB ≤ 1,5 %", cal_cert_no: "CoA A2210", cal_by: "Nhà sản xuất (ISO 17034)", cal_due: d(140) }),
+    std("s-tss", "CH-QTN-03", "Dung dịch chuẩn TSS / độ đục (formazin) (CRM)", "f-qtn", { manufacturer: "Hach", serial: "Lô F4410", range_text: "TSS 0 – 1000 mg/L; 0 – 4000 NTU", accuracy_text: "ĐKĐB ≤ 2 %", cal_cert_no: "CoA F4410", cal_by: "Nhà sản xuất (ISO 17034)" }),
+    std("s-nh4", "CH-QTN-04", "Dung dịch chuẩn amoni 1000 mg/L N (CRM)", "f-qtn", { manufacturer: "Merck", serial: "Lô AM7781", range_text: "0 – 1000 mg/L", accuracy_text: "ĐKĐB ≤ 1,5 %", cal_cert_no: "CoA AM7781", cal_by: "Nhà sản xuất (ISO 17034)", cal_due: d(35) }),
+    std("s-bath", "CH-QTN-05", "Bể ổn nhiệt và nhiệt kế chuẩn", "f-qtn", { manufacturer: "Julabo", model: "CORIO CD", serial: "JB-22015", range_text: "0 – 50 °C", accuracy_text: "Độ ổn định ± 0,03 °C", cal_cert_no: "V03.CN.0412.26", cal_by: "Viện Đo lường Việt Nam" }),
+    std("s-gas", "CH-QTK-01", "Khí chuẩn SO2 / NO / CO trong N2", "f-qtk", { manufacturer: "Linde", model: "Bình 40 L", serial: "LG-77310", range_text: "SO2 800 ppm; NO 800 ppm; CO 800 ppm", accuracy_text: "± 2 % tương đối", cal_cert_no: "V02.KC.0311.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-90), cal_due: d(275) }),
+    std("s-o2", "CH-QTK-02", "Khí chuẩn O2 / CO2 trong N2", "f-qtk", { manufacturer: "Linde", model: "Bình 40 L", serial: "LG-77311", range_text: "O2 20 %V; CO2 18 %V", accuracy_text: "± 1 % tương đối", cal_cert_no: "V02.KC.0312.26", cal_by: "Viện Đo lường Việt Nam" }),
+    std("s-amb", "CH-QTK-03", "Khí chuẩn nồng độ thấp SO2 / NO2 / CO / O3 cho trạm không khí", "f-qtk", { manufacturer: "Air Liquide", serial: "AL-3301", range_text: "SO2, NO2 10 ppm; CO 100 ppm", accuracy_text: "± 2 % tương đối", cal_cert_no: "V02.KC.0320.26", cal_by: "Viện Đo lường Việt Nam" }),
+    std("s-dil", "CH-QTK-04", "Hệ thống pha loãng khí chuẩn và tạo khí \u201ckhông\u201d", "f-qtk", { manufacturer: "Environics", model: "S-4040", serial: "EN-4040-118", range_text: "Tỉ lệ 1:1 – 1:1000", accuracy_text: "± 1 % giá trị đặt", cal_cert_no: "V02.CN.0950.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-120), cal_due: d(245) }),
+    std("s-iso", "CH-QTK-05", "Bộ lấy mẫu khí thải, bụi đẳng động (quan trắc đối chứng RA)", "f-qtk", { manufacturer: "Apex", model: "XC-572", serial: "APX-5720-09", range_text: "Isokinetic", accuracy_text: "Theo US EPA Method 5", cal_cert_no: "V02.CN.0951.26", cal_by: "Viện Đo lường Việt Nam", cal_date: d(-120), cal_due: d(30) }),
+    std("s-dust", "CH-QTK-06", "Chuẩn đo hàm lượng bụi tổng trong không khí", "f-qtk", { manufacturer: "TSI", model: "DustTrak 8533", serial: "TSI-85330-77", range_text: "0 – 150 mg/m3", accuracy_text: "Theo ĐLVN 294:2016", cal_cert_no: "V02.CN.0952.26", cal_by: "Viện Đo lường Việt Nam" }),
   ];
 
+  const cus = (id: string, code: string, name: string, address: string, contact: string, note: string | null, extra: Partial<Customer> = {}): Customer => ({
+    id, code, name, tax_code: null, address, phone: null, email: null, contact_name: contact, contact_phone: null, sales_user_id: "u-em", note, active: true, created_at: t, ...extra,
+  });
   const DEMO_CUSTOMERS: Customer[] = [
-    { id: "c-1", code: "KH-0001", name: "Công ty CP Dược phẩm Thăng Long", tax_code: "0100112233", address: "Khu CN Quang Minh, Mê Linh, Hà Nội", phone: "024 3886 1234", email: "qa@duocthanglong.vn", contact_name: "Chị Lan (QA)", contact_phone: "0912 345 678", sales_user_id: "u-em", note: "Yêu cầu GCN song ngữ", active: true, created_at: t },
-    { id: "c-2", code: "KH-0002", name: "Bệnh viện Đa khoa Gia Lâm", tax_code: "0100445566", address: "Trâu Quỳ, Gia Lâm, Hà Nội", phone: "024 3827 0000", email: "vattu@bvgialam.vn", contact_name: "Anh Tuấn (Vật tư)", contact_phone: "0987 654 321", sales_user_id: "u-em", note: null, active: true, created_at: t },
-    { id: "c-3", code: "KH-0003", name: "Công ty TNHH Xăng dầu Hoàng Gia", tax_code: "0100778899", address: "Km 9 QL5, Sài Đồng, Long Biên, Hà Nội", phone: "024 3875 5555", email: "kythuat@xdhoanggia.vn", contact_name: "Anh Hải", contact_phone: "0903 111 222", sales_user_id: "u-em", note: "Kiểm định tại cửa hàng", active: true, created_at: t },
-    { id: "c-4", code: "KH-0004", name: "Công ty CP Thép Hòa Phúc", tax_code: "0100990011", address: "KCN Phố Nối A, Văn Lâm, Hưng Yên", phone: "0221 3990 000", email: "kho@thephoaphuc.vn", contact_name: "Anh Minh (Kho)", contact_phone: "0978 222 333", sales_user_id: "u-em", note: "Cân ô tô 80 t, cần xe tải chuẩn", active: true, created_at: t },
-    { id: "c-5", code: "KH-0005", name: "Công ty TNHH Nước sạch Sông Hồng", tax_code: "0101122334", address: "Ngõ 8 Láng Hạ, Đống Đa, Hà Nội", phone: "024 3776 0000", email: "dongho@nuocsonghong.vn", contact_name: "Chị Hương", contact_phone: "0945 333 444", sales_user_id: "u-em", note: "Lô đồng hồ nước hằng tháng", active: true, created_at: t },
-    { id: "c-6", code: "KH-0006", name: "Điện lực Long Biên", tax_code: "0100101010", address: "Số 3 Ngọc Lâm, Long Biên, Hà Nội", phone: "024 3827 1111", email: "kd@evnlongbien.vn", contact_name: "Anh Phong", contact_phone: "0966 444 555", sales_user_id: null, note: null, active: true, created_at: t },
-    { id: "c-7", code: "KH-0007", name: "Phòng khám Đa khoa An Sinh", tax_code: "0107654321", address: "88 Trần Duy Hưng, Cầu Giấy, Hà Nội", phone: "024 3555 0000", email: "pkansinh@gmail.com", contact_name: "BS. Hạnh", contact_phone: "0933 555 666", sales_user_id: "u-em", note: null, active: true, created_at: t },
-    { id: "c-8", code: "KH-0008", name: "Công ty TNHH Cơ khí Tân Tiến", tax_code: "0108899001", address: "Lô C5 KCN Tân Bình, TP. HCM", phone: "028 3815 0000", email: "qc@cokhitantien.vn", contact_name: "Anh Lộc", contact_phone: "0909 777 888", sales_user_id: null, note: "Chi nhánh HCM phụ trách", active: true, created_at: t },
-    { id: "c-9", code: "KH-0009", name: "Công ty CP Giấy và Bột Sông Lam", tax_code: "2900334455", address: "KCN Nam Cấm, Nghi Lộc, Nghệ An", phone: "0238 3888 000", email: "moitruong@giaysonglam.vn", contact_name: "Anh Toàn (Phòng Môi trường)", contact_phone: "0912 888 333", sales_user_id: "u-em", note: "Trạm quan trắc nước thải + khí thải tự động, truyền dữ liệu về Sở", active: true, created_at: t },
+    cus("c-1", "KH-0001", "Công ty CP Giấy và Bột Sông Lam", "KCN Nam Cấm, Nghi Lộc, Nghệ An", "Anh Toàn (Phòng Môi trường)", "Trạm nước thải + khí thải lò hơi, truyền dữ liệu về Sở", { tax_code: "2900334455" }),
+    cus("c-2", "KH-0002", "Công ty CP Xi măng Đồng Lâm", "Xã Tân Hòa, huyện Đồng Lâm, Hòa Bình", "Chị Hương (Môi trường – An toàn)", "Khí thải lò nung clinker: bụi PM, SO2, NOx, CO, O2", { tax_code: "5400221133" }),
+    cus("c-3", "KH-0003", "Công ty Hạ tầng KCN Tân Phú Thịnh", "KCN Tân Phú Thịnh, Văn Lâm, Hưng Yên", "Anh Phong (Trạm XLNT tập trung)", "Trạm XLNT tập trung 12.000 m3/ngày", { tax_code: "0901112233" }),
+    cus("c-4", "KH-0004", "Bệnh viện Đa khoa Thành An", "Số 8 Lê Lợi, TP. Thành An", "Anh Minh (Phòng Vật tư)", "Trạm nước thải y tế"),
+    cus("c-5", "KH-0005", "Trung tâm Quan trắc Môi trường tỉnh Thành An", "Số 2 Trần Phú, TP. Thành An", "Chị Lan (Phòng Quan trắc tự động)", "03 trạm không khí xung quanh", { sales_user_id: null }),
+    cus("c-6", "KH-0006", "Công ty TNHH Dệt nhuộm Thành Công", "Lô C5 KCN Tân Bình, TP. Hồ Chí Minh", "Anh Lộc (Kỹ thuật)", "Nước thải dệt nhuộm + khí thải lò hơi; chi nhánh HCM phụ trách"),
   ];
 
   const dev = (id: string, customer_id: string, type: string, name: string, extra: Partial<Device>): Device => ({
     id, customer_id, instrument_type_id: type, name, manufacturer: null, model: null, serial: null, range_text: null, resolution_text: null, accuracy_class: null,
     location: null, customer_code: null, next_due: null, last_cert_id: null, last_result: null, status: "active", note: null, created_at: t, ...extra,
   });
-
+  const W = (where: string) => ({ location: `Trạm QTTĐ nước thải – ${where}` });
   const DEMO_DEVICES: Device[] = [
-    dev("d-1", "c-1", "it-can-pt", "Cân phân tích", { manufacturer: "Sartorius", model: "BSA224S", serial: "0034512187", range_text: "0 – 220 g", resolution_text: "d = 0,1 mg; e = 1 mg", accuracy_class: "I", location: "Phòng QC", customer_code: "QC-CAN-01" }),
-    dev("d-2", "c-1", "it-can-pt", "Cân phân tích", { manufacturer: "Ohaus", model: "PX224", serial: "B916342211", range_text: "0 – 220 g", resolution_text: "d = 0,1 mg; e = 1 mg", accuracy_class: "I", location: "Phòng QC", customer_code: "QC-CAN-02" }),
-    dev("d-3", "c-1", "it-can-kt", "Cân kỹ thuật", { manufacturer: "Ohaus", model: "SPX2201", serial: "B928130077", range_text: "0 – 2200 g", resolution_text: "d = 0,1 g; e = 1 g", accuracy_class: "II", location: "Xưởng pha chế", customer_code: "SX-CAN-05" }),
-    dev("d-4", "c-1", "it-ap-ke", "Áp kế lò xo", { manufacturer: "Wika", model: "233.50", serial: "AK-2023-114", range_text: "0 – 10 bar", accuracy_class: "1,6", location: "Nồi hơi số 1", customer_code: "NH-AK-01" }),
-    dev("d-5", "c-1", "it-ap-ke", "Áp kế lò xo", { manufacturer: "Wika", model: "233.50", serial: "AK-2023-115", range_text: "0 – 10 bar", accuracy_class: "1,6", location: "Nồi hơi số 2", customer_code: "NH-AK-02" }),
-    dev("d-6", "c-2", "it-huyet-ap", "Huyết áp kế đồng hồ", { manufacturer: "ALPK2", model: "500V", serial: "HA-00231", range_text: "0 – 300 mmHg", location: "Khoa Nội", customer_code: "KN-HA-01" }),
-    dev("d-7", "c-2", "it-huyet-ap", "Huyết áp kế đồng hồ", { manufacturer: "ALPK2", model: "500V", serial: "HA-00232", range_text: "0 – 300 mmHg", location: "Khoa Nội", customer_code: "KN-HA-02" }),
-    dev("d-8", "c-2", "it-huyet-ap", "Huyết áp kế điện tử", { manufacturer: "Omron", model: "HEM-7121", serial: "20230115123", range_text: "0 – 299 mmHg", location: "Khoa Sản", customer_code: "KS-HA-01" }),
-    dev("d-9", "c-2", "it-nk-yh", "Nhiệt kế điện tử", { manufacturer: "Microlife", model: "MT-200", serial: "ML-88211", range_text: "32 – 42,9 °C", resolution_text: "0,1 °C", location: "Khoa Nhi", customer_code: "KNH-NK-01" }),
-    dev("d-10", "c-2", "it-nk-yh", "Nhiệt kế điện tử", { manufacturer: "Microlife", model: "MT-200", serial: "ML-88212", range_text: "32 – 42,9 °C", resolution_text: "0,1 °C", location: "Khoa Nhi", customer_code: "KNH-NK-02" }),
-    dev("d-11", "c-2", "it-can-ban", "Cân sức khoẻ", { manufacturer: "Nhơn Hoà", model: "NHHS-120", serial: "NH-120-5567", range_text: "0 – 120 kg", resolution_text: "e = 100 g", accuracy_class: "III", location: "Khoa Khám bệnh" }),
-    dev("d-12", "c-3", "it-cot-xang", "Cột đo xăng dầu", { manufacturer: "Tatsuno", model: "SUNNY-X", serial: "TS-45120", range_text: "5 – 50 L/phút", location: "CHXD số 1, vòi 1", customer_code: "CH1-V1" }),
-    dev("d-13", "c-3", "it-cot-xang", "Cột đo xăng dầu", { manufacturer: "Tatsuno", model: "SUNNY-X", serial: "TS-45121", range_text: "5 – 50 L/phút", location: "CHXD số 1, vòi 2", customer_code: "CH1-V2" }),
-    dev("d-14", "c-3", "it-cot-xang", "Cột đo xăng dầu", { manufacturer: "Tatsuno", model: "SUNNY-X", serial: "TS-45122", range_text: "5 – 50 L/phút", location: "CHXD số 1, vòi 3", customer_code: "CH1-V3" }),
-    dev("d-15", "c-3", "it-cot-xang", "Cột đo xăng dầu", { manufacturer: "Gilbarco", model: "SK700-II", serial: "GB-77301", range_text: "5 – 50 L/phút", location: "CHXD số 2, vòi 1", customer_code: "CH2-V1" }),
-    dev("d-16", "c-4", "it-can-oto", "Cân ô tô điện tử 80 t", { manufacturer: "Mettler Toledo", model: "VTS", serial: "VTS-80-2019-03", range_text: "0 – 80 t", resolution_text: "e = 20 kg", accuracy_class: "III", location: "Cổng kho nguyên liệu", customer_code: "CAN-80T" }),
-    dev("d-17", "c-4", "it-can-ban", "Cân bàn điện tử", { manufacturer: "Cas", model: "DB-II 150", serial: "DB150-0192", range_text: "0 – 150 kg", resolution_text: "e = 50 g", accuracy_class: "III", location: "Kho thành phẩm" }),
-    dev("d-18", "c-4", "it-ap-ke", "Áp kế lò xo", { manufacturer: "Yamamoto", model: "YM-100", serial: "YM-5541", range_text: "0 – 16 bar", accuracy_class: "1,6", location: "Máy nén khí" }),
-    ...Array.from({ length: 6 }, (_, i) => dev(`d-n${i + 1}`, "c-5", "it-dh-nuoc", "Đồng hồ nước lạnh DN15", { manufacturer: "Asahi", model: "GMK", serial: `AS22-${10450 + i}`, range_text: "Q3 = 2,5 m³/h", accuracy_class: "2", location: `Khu dân cư Bắc Linh Đàm, số ${20 + i}` })),
-    ...Array.from({ length: 5 }, (_, i) => dev(`d-e${i + 1}`, "c-6", "it-cong-to-1p", "Công tơ điện 1 pha", { manufacturer: "Gelex EMIC", model: "CV140", serial: `21${300000 + i * 7}`, range_text: "5(20) A, 220 V", accuracy_class: "2", location: "Tổ 5 Ngọc Lâm" })),
-    dev("d-e6", "c-6", "it-cong-to-3p", "Công tơ điện 3 pha", { manufacturer: "Gelex EMIC", model: "MV3E4", serial: "20MV3E-77120", range_text: "3×10(100) A, 3×220/380 V", accuracy_class: "1", location: "Trạm Sài Đồng 2" }),
-    dev("d-19", "c-7", "it-huyet-ap", "Huyết áp kế thuỷ ngân", { manufacturer: "Yamasu", model: "605P", serial: "YS-10022", range_text: "0 – 300 mmHg", location: "Phòng khám 1" }),
-    dev("d-20", "c-7", "it-nk-yh", "Nhiệt kế điện tử", { manufacturer: "Omron", model: "MC-246", serial: "OM-4451", range_text: "32 – 42 °C", location: "Phòng khám 1" }),
-    dev("d-21", "c-7", "it-can-ban", "Cân sức khoẻ điện tử", { manufacturer: "Tanita", model: "HD-382", serial: "TN-20931", range_text: "0 – 150 kg", resolution_text: "e = 100 g", accuracy_class: "III", location: "Phòng khám 1" }),
-    dev("d-22", "c-8", "it-can-ban", "Cân bàn điện tử", { manufacturer: "Cas", model: "DB-II 300", serial: "DB300-1120", range_text: "0 – 300 kg", resolution_text: "e = 100 g", accuracy_class: "III", location: "Xưởng A" }),
-    dev("d-23", "c-8", "it-thuoc-cuon", "Thước cuộn 5 m", { manufacturer: "Stanley", model: "30-497", serial: "ST-001", range_text: "0 – 5 m", accuracy_class: "II", location: "Phòng QC" }),
-    dev("d-24", "c-8", "it-thuoc-cuon", "Thước cuộn 5 m", { manufacturer: "Stanley", model: "30-497", serial: "ST-002", range_text: "0 – 5 m", accuracy_class: "II", location: "Phòng QC" }),
-    dev("d-25", "c-8", "it-ap-ke", "Áp kế lò xo", { manufacturer: "Wika", model: "111.10", serial: "WK-990011", range_text: "0 – 10 bar", accuracy_class: "2,5", location: "Máy ép thuỷ lực" }),
-    // trạm quan trắc tự động của khách c-9
-    dev("d-qt-ph", "c-9", "it-qt-ph", "Đầu đo pH – trạm nước thải", { manufacturer: "Endress+Hauser", model: "Liquiline CM442 / CPS11E", serial: "R5012345", range_text: "0 ÷ 14 pH", resolution_text: "0,01 pH", location: "Trạm QTTĐ nước thải sau xử lý", customer_code: "WW-PH" }),
-    dev("d-qt-cod", "c-9", "it-qt-cod", "Thiết bị đo COD – trạm nước thải", { manufacturer: "Hach", model: "UVAS sc", serial: "1234-COD-55", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", location: "Trạm QTTĐ nước thải sau xử lý", customer_code: "WW-COD" }),
-    dev("d-qt-tss", "c-9", "it-qt-tss", "Thiết bị đo TSS – trạm nước thải", { manufacturer: "Hach", model: "Solitax sc", serial: "TS-22018", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", location: "Trạm QTTĐ nước thải sau xử lý", customer_code: "WW-TSS" }),
-    dev("d-qt-nh4", "c-9", "it-qt-nh4", "Thiết bị đo amoni – trạm nước thải", { manufacturer: "Hach", model: "Amtax sc", serial: "AM-55102", range_text: "0 ÷ 50 mg/L", resolution_text: "0,01 mg/L", location: "Trạm QTTĐ nước thải sau xử lý", customer_code: "WW-NH4" }),
-    dev("d-qt-so2", "c-9", "it-qt-gas", "Bộ phân tích SO2 – trạm khí thải lò hơi", { manufacturer: "Sick", model: "GMS810", serial: "SK-81003", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò hơi số 1", customer_code: "ST-SO2" }),
-    dev("d-qt-nox", "c-9", "it-qt-gas", "Bộ phân tích NO – trạm khí thải lò hơi", { manufacturer: "Sick", model: "GMS810", serial: "SK-81004", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò hơi số 1", customer_code: "ST-NOX" }),
-    dev("d-qt-o2", "c-9", "it-qt-o2", "Bộ phân tích O2 – trạm khí thải lò hơi", { manufacturer: "Sick", model: "Zirkor", serial: "ZK-3302", range_text: "0 ÷ 25 %V", resolution_text: "0,1 %V", location: "Ống khói lò hơi số 1", customer_code: "ST-O2" }),
-    dev("d-qt-ra-cod", "c-9", "it-qt-ra-nuoc", "Kênh COD – hệ thống QTTĐ nước thải", { manufacturer: "Hach", model: "UVAS sc", serial: "1234-COD-55", range_text: "0 ÷ 500 mg/L", location: "Trạm QTTĐ nước thải sau xử lý", customer_code: "WW-COD-RA" }),
-    dev("d-qt-ra-so2", "c-9", "it-qt-ra-khi", "Kênh SO2 – hệ thống QTTĐ khí thải lò hơi", { manufacturer: "Sick", model: "GMS810", serial: "SK-81003", range_text: "0 ÷ 2800 mg/m3", location: "Ống khói lò hơi số 1", customer_code: "ST-SO2-RA" }),
+    // c-1 Giấy Sông Lam
+    dev("d-1-ph", "c-1", "it-qt-ph", "Đầu đo pH", { manufacturer: "Endress+Hauser", model: "CM442 / CPS11E", serial: "R5012345", range_text: "0 ÷ 14 pH", resolution_text: "0,01 pH", customer_code: "WW-PH", ...W("sau xử lý") }),
+    dev("d-1-cod", "c-1", "it-qt-cod", "Thiết bị đo COD", { manufacturer: "Hach", model: "UVAS sc", serial: "COD-55102", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "WW-COD", ...W("sau xử lý") }),
+    dev("d-1-tss", "c-1", "it-qt-tss", "Thiết bị đo TSS", { manufacturer: "Hach", model: "Solitax sc", serial: "TSS-22018", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "WW-TSS", ...W("sau xử lý") }),
+    dev("d-1-nh4", "c-1", "it-qt-nh4", "Thiết bị đo amoni", { manufacturer: "Hach", model: "Amtax sc", serial: "NH4-55102", range_text: "0 ÷ 50 mg/L", resolution_text: "0,01 mg/L", customer_code: "WW-NH4", ...W("sau xử lý") }),
+    dev("d-1-ra", "c-1", "it-qt-ra-nuoc", "Kênh COD – hệ thống QTTĐ nước thải", { manufacturer: "Hach", model: "UVAS sc", serial: "COD-55102", range_text: "0 ÷ 500 mg/L", customer_code: "WW-COD-RA", ...W("sau xử lý") }),
+    dev("d-1-so2", "c-1", "it-qt-gas", "Bộ phân tích SO2", { manufacturer: "Sick", model: "GMS810", serial: "SK-81003", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò hơi số 1", customer_code: "ST-SO2", next_due: d(12), last_result: "pass" }),
+    // c-2 Xi măng Đồng Lâm
+    dev("d-2-so2", "c-2", "it-qt-gas", "Bộ phân tích SO2 – lò nung", { manufacturer: "Siemens", model: "Ultramat 23", serial: "SI-U23-1101", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò nung clinker", customer_code: "KN-SO2" }),
+    dev("d-2-no", "c-2", "it-qt-gas", "Bộ phân tích NO – lò nung", { manufacturer: "Siemens", model: "Ultramat 23", serial: "SI-U23-1102", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò nung clinker", customer_code: "KN-NO" }),
+    dev("d-2-co", "c-2", "it-qt-gas", "Bộ phân tích CO – lò nung", { manufacturer: "Siemens", model: "Ultramat 23", serial: "SI-U23-1103", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò nung clinker", customer_code: "KN-CO" }),
+    dev("d-2-o2", "c-2", "it-qt-o2", "Bộ phân tích O2 – lò nung", { manufacturer: "Siemens", model: "Oxymat 6", serial: "SI-OX6-2201", range_text: "0 ÷ 25 %V", resolution_text: "0,1 %V", location: "Ống khói lò nung clinker", customer_code: "KN-O2" }),
+    dev("d-2-pm", "c-2", "it-qt-ra-bui", "Thiết bị đo bụi PM – lò nung", { manufacturer: "Durag", model: "D-R 290", serial: "DR290-7781", range_text: "0 ÷ 200 mg/m3", location: "Ống khói lò nung clinker", customer_code: "KN-PM" }),
+    dev("d-2-ra", "c-2", "it-qt-ra-khi", "Kênh SO2 – hệ thống QTTĐ khí thải lò nung", { manufacturer: "Siemens", model: "Ultramat 23", serial: "SI-U23-1101", range_text: "0 ÷ 2800 mg/m3", location: "Ống khói lò nung clinker", customer_code: "KN-SO2-RA" }),
+    // c-3 KCN Tân Phú Thịnh
+    dev("d-3-ph", "c-3", "it-qt-ph", "Đầu đo pH", { manufacturer: "WTW", model: "IQ SensorNet SensoLyt 700", serial: "WTW-70011", range_text: "0 ÷ 14 pH", resolution_text: "0,01 pH", customer_code: "TPT-PH", ...W("cửa xả KCN") }),
+    dev("d-3-cod", "c-3", "it-qt-cod", "Thiết bị đo COD", { manufacturer: "Endress+Hauser", model: "Viomax CAS51D", serial: "EH-CAS51-3301", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "TPT-COD", ...W("cửa xả KCN") }),
+    dev("d-3-tss", "c-3", "it-qt-tss", "Thiết bị đo TSS", { manufacturer: "Endress+Hauser", model: "Turbimax CUS51D", serial: "EH-CUS51-3302", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "TPT-TSS", ...W("cửa xả KCN") }),
+    dev("d-3-nh4", "c-3", "it-qt-nh4", "Thiết bị đo amoni", { manufacturer: "Endress+Hauser", model: "CA80AM", serial: "EH-CA80-3303", range_text: "0 ÷ 50 mg/L", resolution_text: "0,01 mg/L", customer_code: "TPT-NH4", ...W("cửa xả KCN") }),
+    dev("d-3-ra-cod", "c-3", "it-qt-ra-nuoc", "Kênh COD – hệ thống QTTĐ nước thải KCN", { manufacturer: "Endress+Hauser", model: "CAS51D", serial: "EH-CAS51-3301", range_text: "0 ÷ 500 mg/L", customer_code: "TPT-COD-RA", ...W("cửa xả KCN") }),
+    dev("d-3-ra-tss", "c-3", "it-qt-ra-nuoc30", "Kênh TSS – hệ thống QTTĐ nước thải KCN", { manufacturer: "Endress+Hauser", model: "CUS51D", serial: "EH-CUS51-3302", range_text: "0 ÷ 500 mg/L", customer_code: "TPT-TSS-RA", ...W("cửa xả KCN") }),
+    // c-4 Bệnh viện
+    dev("d-4-ph", "c-4", "it-qt-ph", "Đầu đo pH", { manufacturer: "Hach", model: "pHD sc", serial: "HPH-44001", range_text: "0 ÷ 14 pH", resolution_text: "0,01 pH", customer_code: "BV-PH", ...W("bệnh viện") }),
+    dev("d-4-cod", "c-4", "it-qt-cod", "Thiết bị đo COD", { manufacturer: "Hach", model: "UVAS sc", serial: "COD-44002", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "BV-COD", ...W("bệnh viện") }),
+    dev("d-4-tss", "c-4", "it-qt-tss", "Thiết bị đo TSS", { manufacturer: "Hach", model: "Solitax sc", serial: "TSS-44003", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "BV-TSS", ...W("bệnh viện") }),
+    // c-5 Trạm không khí xung quanh
+    dev("d-5-so2", "c-5", "it-qt-amb", "Máy phân tích SO2 – trạm KK số 1", { manufacturer: "Teledyne API", model: "T100", serial: "TAPI-T100-5501", range_text: "0 ÷ 1 ppm", resolution_text: "0,001 ppm", location: "Trạm KK số 1 – Công viên trung tâm", customer_code: "KK1-SO2" }),
+    dev("d-5-no2", "c-5", "it-qt-amb", "Máy phân tích NO2 – trạm KK số 1", { manufacturer: "Teledyne API", model: "T200", serial: "TAPI-T200-5502", range_text: "0 ÷ 1 ppm", resolution_text: "0,001 ppm", location: "Trạm KK số 1 – Công viên trung tâm", customer_code: "KK1-NO2" }),
+    dev("d-5-co", "c-5", "it-qt-amb", "Máy phân tích CO – trạm KK số 1", { manufacturer: "Teledyne API", model: "T300", serial: "TAPI-T300-5503", range_text: "0 ÷ 1 ppm (dải thấp)", resolution_text: "0,001 ppm", location: "Trạm KK số 1 – Công viên trung tâm", customer_code: "KK1-CO" }),
+    dev("d-5-dust", "c-5", "it-qt-dust", "Thiết bị đo bụi tổng – trạm KK số 1", { manufacturer: "Met One", model: "BAM-1020", serial: "MO-BAM-5504", range_text: "0 ÷ 200 mg/m3", resolution_text: "0,01 mg/m3", location: "Trạm KK số 1 – Công viên trung tâm", customer_code: "KK1-TSP" }),
+    dev("d-5-so2b", "c-5", "it-qt-amb", "Máy phân tích SO2 – trạm KK số 2", { manufacturer: "Thermo", model: "43i", serial: "TH-43I-5511", range_text: "0 ÷ 1 ppm", resolution_text: "0,001 ppm", location: "Trạm KK số 2 – KCN phía Bắc", customer_code: "KK2-SO2", next_due: d(-4), last_result: "pass" }),
+    dev("d-5-o3", "c-5", "it-qt-amb", "Máy phân tích O3 – trạm KK số 2", { manufacturer: "Thermo", model: "49i", serial: "TH-49I-5512", range_text: "0 ÷ 1 ppm", resolution_text: "0,001 ppm", location: "Trạm KK số 2 – KCN phía Bắc", customer_code: "KK2-O3", next_due: d(20), last_result: "pass" }),
+    // c-6 Dệt nhuộm
+    dev("d-6-ph", "c-6", "it-qt-ph", "Đầu đo pH", { manufacturer: "Hach", model: "pHD sc", serial: "HPH-66001", range_text: "0 ÷ 14 pH", resolution_text: "0,01 pH", customer_code: "DN-PH", ...W("dệt nhuộm") }),
+    dev("d-6-cod", "c-6", "it-qt-cod", "Thiết bị đo COD", { manufacturer: "Hach", model: "UVAS sc", serial: "COD-66002", range_text: "0 ÷ 500 mg/L", resolution_text: "0,1 mg/L", customer_code: "DN-COD", ...W("dệt nhuộm") }),
+    dev("d-6-ec", "c-6", "it-qt-ec", "Thiết bị đo độ dẫn điện", { manufacturer: "Hach", model: "3798 sc", serial: "EC-66003", range_text: "0 ÷ 2000 µS/cm", resolution_text: "0,1 µS/cm", customer_code: "DN-EC", ...W("dệt nhuộm") }),
+    dev("d-6-so2", "c-6", "it-qt-gas", "Bộ phân tích SO2 – lò hơi", { manufacturer: "Sick", model: "GMS810", serial: "SK-66101", range_text: "0 ÷ 1000 ppm", resolution_text: "1 ppm", location: "Ống khói lò hơi than", customer_code: "DN-SO2" }),
   ];
-  return { DEMO_BRANCHES, DEMO_USERS, DEMO_AUTHS, DEMO_STANDARDS, DEMO_CUSTOMERS, DEMO_DEVICES };
+
+  return { DEMO_COMPANY, DEMO_BRANCHES, DEMO_USERS, DEMO_AUTHS, DEMO_STANDARDS, DEMO_CUSTOMERS, DEMO_DEVICES };
 }
+
+/** Đổi khi thay bộ demo: trình duyệt đang giữ bộ cũ sẽ tự xoá và nạp lại */
+export const DEMO_VERSION = "quan-trac-tu-dong-1";
 
 /** Danh sách người dùng mẫu (id, vai trò) – dùng trong kiểm thử */
 export const demoUsers = () => buildDemo().DEMO_USERS;
@@ -187,7 +198,7 @@ export function genReadings(template: Template, fail = false): Readings {
 // Nạp toàn bộ demo
 // ---------------------------------------------------------------------------
 export async function seedDemo(repo: Repo): Promise<void> {
-  const { DEMO_BRANCHES, DEMO_USERS, DEMO_AUTHS, DEMO_STANDARDS, DEMO_CUSTOMERS, DEMO_DEVICES } = buildDemo();
+  const { DEMO_COMPANY, DEMO_BRANCHES, DEMO_USERS, DEMO_AUTHS, DEMO_STANDARDS, DEMO_CUSTOMERS, DEMO_DEVICES } = buildDemo();
   const t = nowIso();
   const d = (daysFromNow: number) => dayjs().add(daysFromNow, "day").format("YYYY-MM-DD");
   const stamp = <R extends { created_at: string }>(r: R): R => ({ ...r, created_at: t });
@@ -195,12 +206,12 @@ export async function seedDemo(repo: Repo): Promise<void> {
   const svc = new Services(repo, () => current);
   const as = (id: string) => { current = DEMO_USERS.find((u) => u.id === id)!; };
 
-  await repo.insert("settings", { ...DEFAULT_SETTINGS, updated_at: t });
+  await repo.insert("settings", { ...DEFAULT_SETTINGS, company: DEMO_COMPANY, updated_at: t });
   for (const r of DEMO_BRANCHES) await repo.insert("branches", r);
   for (const r of DEMO_USERS) await repo.insert("users", r);
-  for (const r of FIELDS) await repo.insert("fields", stamp(r));
-  for (const r of PROCEDURES) await repo.insert("procedures", stamp(r));
-  for (const r of INSTRUMENT_TYPES) await repo.insert("instrument_types", stamp(r));
+  for (const r of FIELDS_QT) await repo.insert("fields", stamp(r));
+  for (const r of PROCEDURES_QT) await repo.insert("procedures", stamp(r));
+  for (const r of INSTRUMENT_TYPES_QT) await repo.insert("instrument_types", stamp(r));
   for (const r of DEMO_AUTHS) await repo.insert("authorizations", r);
   for (const r of DEMO_STANDARDS) await repo.insert("standards", r);
   for (const r of DEMO_CUSTOMERS) await repo.insert("customers", r);
@@ -208,41 +219,48 @@ export async function seedDemo(repo: Repo): Promise<void> {
 
   // Tem: 1 lô đã nhận, cấp một phần cho người ký
   as("u-dung");
-  await svc.createSealBatch({ prefix: "KĐV-", from_no: 1, to_no: 500, received_at: d(-60), note: "Lô tem năm nay, nhận từ Tổng cục", width: 6 });
+  await svc.createSealBatch({ prefix: "KĐV-", from_no: 1, to_no: 500, received_at: d(-60), note: "Lô tem năm nay", width: 6 });
   const seals = await repo.list("seals", { orderBy: { field: "seq" }, limit: 100 });
   await svc.assignSeals(seals.slice(0, 50).map((s) => s.id), "u-an");
   await svc.assignSeals(seals.slice(50, 100).map((s) => s.id), "u-dung");
 
-  const procById = Object.fromEntries(PROCEDURES.map((p) => [p.id, p]));
-  const typeById = Object.fromEntries(INSTRUMENT_TYPES.map((x) => [x.id, x]));
-  const stdFor: Record<string, string[]> = { "f-kl": ["s-qc-e2", "s-qc-f1"], "f-as": ["s-ap"], "f-nd": ["s-nd"], "f-dt": ["s-dt2"], "f-di": ["s-di"], "f-dl": ["s-dl"], "f-qtn": ["s-qt-ph", "s-qt-cod"], "f-qtk": ["s-qt-gas", "s-qt-dil", "s-qt-iso"] };
-  const techFor: Record<string, string> = { "f-kl": "u-binh", "f-as": "u-binh", "f-nd": "u-binh", "f-dt": "u-cuong", "f-di": "u-cuong", "f-dl": "u-cuong", "f-qtn": "u-cuong", "f-qtk": "u-cuong" };
-  const intake = { condition: "Hoạt động bình thường, vỏ ngoài nguyên vẹn", accessories: "Dây nguồn, hộp đựng", note: "" };
+  const procById = Object.fromEntries(PROCEDURES_QT.map((p) => [p.id, p]));
+  const typeById = Object.fromEntries(INSTRUMENT_TYPES_QT.map((x) => [x.id, x]));
+  // chuẩn dùng theo loại phương tiện đo
+  const stdFor = (typeId: string): string[] => ({
+    "it-qt-ph": ["s-ph", "s-bath"], "it-qt-cod": ["s-cod"], "it-qt-tss": ["s-tss"], "it-qt-nh4": ["s-nh4"], "it-qt-ec": ["s-bath"],
+    "it-qt-gas": ["s-gas", "s-dil"], "it-qt-o2": ["s-o2", "s-dil"], "it-qt-amb": ["s-amb", "s-dil"], "it-qt-dust": ["s-dust"],
+    "it-qt-ra-nuoc": ["s-cod"], "it-qt-ra-nuoc30": ["s-tss"], "it-qt-ra-khi": ["s-iso", "s-gas"], "it-qt-ra-bui": ["s-iso"],
+  } as Record<string, string[]>)[typeId] ?? [];
+  const techFor = (fieldId: string) => (fieldId === "f-qtn" ? "u-binh" : "u-cuong");
+  const intake = { condition: "Thiết bị đang lắp tại trạm, hoạt động bình thường", accessories: "", note: "" };
 
-  async function order(customer_id: string, deviceIds: string[], received: number, expected: number, onsite = false, prices?: Record<string, number>) {
+  async function order(customer_id: string, deviceIds: string[], received: number, expected: number, onsite = true, branch = "br-hn") {
     as("u-em");
     const items = deviceIds.map((id) => {
       const dv = DEMO_DEVICES.find((x) => x.id === id)!;
-      return { device_id: id, kind: "periodic" as JobKind, price: prices?.[id] ?? typeById[dv.instrument_type_id].default_price, priority: "normal" as const, intake };
+      return { device_id: id, kind: "periodic" as JobKind, price: typeById[dv.instrument_type_id].default_price, priority: "normal" as const, intake };
     });
-    const { order, jobs } = await svc.createOrder({ customer_id, branch_id: "br-hn", received_at: d(received), expected_at: d(expected), onsite, contact_name: DEMO_CUSTOMERS.find((c) => c.id === customer_id)!.contact_name, contact_phone: null, note: null, items });
-    return { order, jobs };
+    const c = DEMO_CUSTOMERS.find((x) => x.id === customer_id)!;
+    return svc.createOrder({ customer_id, branch_id: branch, received_at: d(received), expected_at: d(expected), onsite, contact_name: c.contact_name, contact_phone: null, note: null, items });
   }
-  async function perform(jobId: string, fail = false, date = d(-1)) {
+  async function assign(jobId: string, tech?: string, reviewer: string | null = null) {
     const job = (await repo.get("jobs", jobId))!;
-    const type = typeById[job.instrument_type_id];
-    const proc = procById[type.procedure_id!];
-    const tech = techFor[type.field_id];
     as("u-dung");
-    await svc.assignJob(jobId, { assignee_id: tech, reviewer_id: null, due_date: job.due_date, priority: job.priority });
-    as(tech);
-    await svc.saveReadings(jobId, { env: { temp: 23.5, humidity: 58, pressure: 1012 }, readings: genReadings(proc.template, fail), standard_ids: stdFor[type.field_id].filter((s) => s !== "s-qc-m1"), performed_at: date, performed_note: null });
+    await svc.assignJob(jobId, { assignee_id: tech ?? techFor(typeById[job.instrument_type_id].field_id), reviewer_id: reviewer, due_date: job.due_date, priority: job.priority });
+  }
+  async function perform(jobId: string, fail = false, date = d(-1), tech?: string) {
+    await assign(jobId, tech);
+    const job = (await repo.get("jobs", jobId))!;
+    const proc = procById[typeById[job.instrument_type_id].procedure_id!];
+    as(job.assignee_id!);
+    await svc.saveReadings(jobId, { env: { temp: 24.5, humidity: 62, pressure: 1009 }, readings: genReadings(proc.template, fail), standard_ids: stdFor(job.instrument_type_id), performed_at: date, performed_note: null });
     await svc.submitForReview(jobId);
   }
-  async function review(jobId: string, ok = true) {
-    as("u-dung");
+  async function review(jobId: string, ok = true, by = "u-dung") {
+    as(by);
     const s = await svc.settings();
-    await svc.reviewJob(jobId, { ok, note: ok ? null : "Số liệu điểm tải lớn nhất bất thường, đo lại", checks: Object.fromEntries(s.review.checklist.map((_, i) => [String(i), true])) });
+    await svc.reviewJob(jobId, { ok, note: ok ? null : "Độ trôi lần 2 bất thường, kiểm tra lại đầu đo rồi đo lại", checks: Object.fromEntries(s.review.checklist.map((_, i) => [String(i), true])) });
   }
   async function issue(jobId: string, date = d(-1)) {
     as("u-an");
@@ -251,69 +269,41 @@ export async function seedDemo(repo: Repo): Promise<void> {
     return svc.approveAndIssue(jobId, { issued_at: date, seal_no: seal?.number ?? null, place: DEMO_CUSTOMERS.find((c) => c.id === job.customer_id)!.address ?? "" });
   }
 
-  // 1. Đơn đã hoàn thành tháng trước (Dược Thăng Long: 2 cân phân tích + 2 áp kế), trả khách
+  // 1. Giấy Sông Lam – xong 1 tháng trước: 4 đầu đo nước + RA kênh COD, đã trả, đã thu tiền
   {
-    const { jobs } = await order("c-1", ["d-1", "d-2", "d-4", "d-5"], -40, -33);
+    const { order: o, jobs } = await order("c-1", ["d-1-ph", "d-1-cod", "d-1-tss", "d-1-nh4", "d-1-ra"], -40, -32);
     for (const j of jobs) { await perform(j.id, false, d(-36)); await review(j.id); await issue(j.id, d(-35)); as("u-em"); await svc.returnDevice(j.id, d(-34)); }
-    as("u-giang");
-    await svc.setOrderPaid(jobs[0].order_id, true, d(-30));
+    as("u-giang"); await svc.setOrderPaid(o.id, true, d(-30));
   }
-  // 2. Bệnh viện Gia Lâm: 6 thiết bị, 1 huyết áp kế không đạt, phần còn lại ở các bước khác nhau
+  // 2. Xi măng Đồng Lâm – khí thải lò nung, đang làm: SO2 phát hành, NO không đạt điểm "0", CO chờ ký, O2 chờ soát xét, RA bụi + RA SO2 đã phân công
   {
-    const { jobs } = await order("c-2", ["d-6", "d-7", "d-8", "d-9", "d-10", "d-11"], -6, 1);
+    const { jobs } = await order("c-2", ["d-2-so2", "d-2-no", "d-2-co", "d-2-o2", "d-2-pm", "d-2-ra"], -6, 2);
     await perform(jobs[0].id, false, d(-4)); await review(jobs[0].id); await issue(jobs[0].id, d(-3));
-    await perform(jobs[1].id, true, d(-4)); await review(jobs[1].id); await issue(jobs[1].id, d(-3)); // không đạt → thông báo
-    await perform(jobs[2].id, false, d(-2)); await review(jobs[2].id);                                 // chờ phê duyệt
-    await perform(jobs[3].id, false, d(-2));                                                           // chờ soát xét
-    await perform(jobs[4].id, false, d(-1)); await review(jobs[4].id, false);                          // bị trả lại
-    as("u-dung"); await svc.assignJob(jobs[5].id, { assignee_id: "u-binh", reviewer_id: "u-cuong", due_date: d(1), priority: "normal" }); // đã phân công
+    await perform(jobs[1].id, true, d(-4)); await review(jobs[1].id); await issue(jobs[1].id, d(-3));
+    await perform(jobs[2].id, false, d(-2)); await review(jobs[2].id);
+    await perform(jobs[3].id, false, d(-1));
+    await assign(jobs[4].id, "u-hung");
+    await assign(jobs[5].id, "u-cuong");
   }
-  // 3. Xăng dầu Hoàng Gia: hiện trường, chờ phân công, gấp
+  // 3. KCN Tân Phú Thịnh – mới tiếp nhận: COD, TSS phân công cho Cường; pH, amoni, RA chờ phân công
   {
-    const { jobs } = await order("c-3", ["d-12", "d-13", "d-14", "d-15"], -1, 3, true);
-    as("u-dung");
-    await svc.assignJob(jobs[0].id, { assignee_id: "u-cuong", reviewer_id: null, due_date: d(3), priority: "urgent" });
+    const { jobs } = await order("c-3", ["d-3-ph", "d-3-cod", "d-3-tss", "d-3-nh4", "d-3-ra-cod", "d-3-ra-tss"], -1, 6);
+    await assign(jobs[1].id, "u-cuong");
+    await assign(jobs[2].id, "u-cuong", "u-dung");
   }
-  // 4. Thép Hòa Phúc: cân ô tô hiện trường – đã phát hành năm ngoái, sắp đến hạn (mô phỏng qua next_due)
-  await repo.update("devices", "d-16", { next_due: d(12), last_result: "pass" });
-  await repo.update("devices", "d-17", { next_due: d(-5), last_result: "pass" });
-  await repo.update("devices", "d-18", { next_due: d(25), last_result: "pass" });
-  // 5. Nước Sông Hồng: lô đồng hồ nước, 3 đã phát hành, 3 đang làm
+  // 4. Bệnh viện Thành An – quá hẹn trả: pH đang đo dở (bị trả lại sau soát xét), COD và TSS đã phân công cho Bình
   {
-    const ids = DEMO_DEVICES.filter((x) => x.customer_id === "c-5").map((x) => x.id);
-    const { jobs } = await order("c-5", ids, -3, 4);
-    for (const j of jobs.slice(0, 3)) { await perform(j.id, false, d(-2)); await review(j.id); await issue(j.id, d(-1)); }
-    for (const j of jobs.slice(3)) { as("u-dung"); await svc.assignJob(j.id, { assignee_id: "u-cuong", reviewer_id: null, due_date: d(4), priority: "normal" }); }
+    const { jobs } = await order("c-4", ["d-4-ph", "d-4-cod", "d-4-tss"], -9, -2);
+    await perform(jobs[0].id, false, d(-3)); await review(jobs[0].id, false);
+    await assign(jobs[1].id, "u-binh"); await assign(jobs[2].id, "u-binh");
   }
-  // 6. Điện lực Long Biên: công tơ, tất cả chờ phân công (đơn mới hôm nay)
-  await order("c-6", DEMO_DEVICES.filter((x) => x.customer_id === "c-6").map((x) => x.id), 0, 7);
-  // 7. Phòng khám An Sinh: quá hạn trả, đang thực hiện
+  // 5. Trung tâm Quan trắc tỉnh – trạm KK số 1 xong 2 tuần trước, chưa thu tiền
   {
-    const { jobs } = await order("c-7", ["d-19", "d-20", "d-21"], -10, -2);
-    as("u-dung");
-    for (const j of jobs) await svc.assignJob(j.id, { assignee_id: "u-binh", reviewer_id: null, due_date: d(-2), priority: "normal" });
-    as("u-binh");
-    const proc = procById["pr-huyet-ap"];
-    const partial = genReadings(proc.template);
-    (partial.err as Record<string, (number | null)[]>).p6 = [null];
-    await svc.saveReadings(jobs[0].id, { env: { temp: 24, humidity: 60, pressure: null }, readings: partial, standard_ids: ["s-ha"], performed_at: d(0), performed_note: "Đang đo dở" });
+    const { jobs } = await order("c-5", ["d-5-so2", "d-5-no2", "d-5-co", "d-5-dust"], -20, -12);
+    for (const j of jobs) { await perform(j.id, false, d(-15)); await review(j.id); await issue(j.id, d(-14)); }
   }
-  // 8. Cơ khí Tân Tiến: thước cuộn + cân + áp kế ở HCM, đã phát hành, chưa thu tiền
-  {
-    const { jobs } = await order("c-8", ["d-22", "d-23", "d-24", "d-25"], -20, -14);
-    for (const j of jobs) { await perform(j.id, false, d(-16)); await review(j.id); await issue(j.id, d(-15)); }
-  }
-
-  // 9. Giấy Sông Lam: trạm quan trắc tự động – kiểm định đầu đo (ĐLVN 38x) và kiểm tra RA hằng năm (TT 10/2021)
-  {
-    const { jobs } = await order("c-9", ["d-qt-ph", "d-qt-cod", "d-qt-ra-cod", "d-qt-tss", "d-qt-so2", "d-qt-ra-so2", "d-qt-o2"], -5, 5, true);
-    for (const j of jobs.slice(0, 3)) { await perform(j.id, false, d(-3)); await review(j.id); await issue(j.id, d(-2)); }  // pH, COD: GCN có tem; RA COD: biên bản
-    await perform(jobs[3].id, false, d(-1));                                                                              // TSS: chờ soát xét
-    await perform(jobs[4].id, false, d(-1)); await review(jobs[4].id);                                                    // SO2: chờ ký
-    as("u-dung"); await svc.assignJob(jobs[5].id, { assignee_id: "u-cuong", reviewer_id: null, due_date: d(5), priority: "normal" }); // RA SO2: đã phân công
-  }
-  await repo.update("devices", "d-qt-nh4", { next_due: d(18), last_result: "pass" });
-  await repo.update("devices", "d-qt-nox", { next_due: d(9), last_result: "pass" });
+  // 6. Dệt nhuộm Thành Công (chi nhánh HCM) – đơn mới hôm nay, chờ phân công
+  await order("c-6", ["d-6-ph", "d-6-cod", "d-6-ec", "d-6-so2"], 0, 7, true, "br-hcm");
 
   as("u-an");
   await svc.runDailyChecks();

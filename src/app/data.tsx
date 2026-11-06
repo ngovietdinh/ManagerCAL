@@ -11,7 +11,7 @@ import { Services } from "@/lib/services";
 import { LocalRepo, idbClear } from "@/lib/store/local";
 import { RemoteRepo, detectServer, remoteServices } from "@/lib/store/remote";
 import type { Repo, Query } from "@/lib/store/repo";
-import { seedDemo } from "@/lib/seed/demo";
+import { DEMO_VERSION, seedDemo } from "@/lib/seed/demo";
 import type { Row, TableName, User } from "@/lib/types";
 import { can, type Action } from "@/lib/perm";
 
@@ -38,14 +38,20 @@ interface DataCtx {
 
 const Ctx = createContext<DataCtx | null>(null);
 const LS_USER = "managercal.user";
+const LS_DEMO = "managercal.demo";
 
 // Nạp kho và (nếu trống) dữ liệu demo đúng một lần cho mỗi kho,
 // kể cả khi React chạy hiệu ứng hai lần (StrictMode).
+// Trình duyệt còn giữ bộ demo đời trước → xoá và nạp bộ demo hiện hành.
 const inits = new WeakMap<LocalRepo, Promise<void>>();
 function initOnce(repo: LocalRepo): Promise<void> {
   let p = inits.get(repo);
   if (!p) {
-    p = repo.load().then((had) => (had ? undefined : seedDemo(repo))).then(() => repo.flush());
+    p = repo.load().then(async (had) => {
+      const stale = had && localStorage.getItem(LS_DEMO) !== DEMO_VERSION;
+      if (stale) { await idbClear(); await repo.replaceAll({}, {}); localStorage.removeItem(LS_USER); }
+      if (!had || stale) { await seedDemo(repo); localStorage.setItem(LS_DEMO, DEMO_VERSION); }
+    }).then(() => repo.flush());
     inits.set(repo, p);
   }
   return p;

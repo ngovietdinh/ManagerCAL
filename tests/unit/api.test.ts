@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { handleApi } from "../../worker/api";
 import { createD1 } from "./d1shim";
+import { genReadings } from "@/lib/seed/demo";
 
 const db = createD1();
 const env = { DB: db };
@@ -29,7 +30,7 @@ beforeAll(async () => {
   const s = await call("/api/setup", { body: { company_name: "Công ty Thử", full_name: "Nguyễn Văn An", email: "an@thu.vn", password: PW, demo: true } });
   expect(s.status).toBe(200);
   admin = s.cookie!;
-  for (const [email, set] of [["binh@kdviet.vn", (c: string) => (binh = c)], ["dung@kdviet.vn", (c: string) => (dung = c)], ["em@kdviet.vn", (c: string) => (em = c)]] as const) {
+  for (const [email, set] of [["binh@kdqtviet.vn", (c: string) => (binh = c)], ["dung@kdqtviet.vn", (c: string) => (dung = c)], ["em@kdqtviet.vn", (c: string) => (em = c)]] as const) {
     const r = await call("/api/login", { body: { email, password: PW } });
     expect(r.status).toBe(200);
     set(r.cookie!);
@@ -67,11 +68,11 @@ describe("khởi tạo, đăng nhập", () => {
 
 describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)", () => {
   it("tiếp nhận → phân công → nhập biên bản → soát xét → ký phát hành, số GCN và tem đúng", async () => {
-    // tiếp nhận 1 cân bàn của Phòng khám An Sinh
+    // tiếp nhận lại đầu đo pH của Giấy Sông Lam (kiểm định sau sửa chữa)
     const order = await rpc(em, "createOrder", {
-      customer_id: "c-7", branch_id: "br-hn", received_at: "2026-11-06", expected_at: "2026-11-10", onsite: false,
+      customer_id: "c-1", branch_id: "br-hn", received_at: "2026-11-06", expected_at: "2026-11-10", onsite: false,
       contact_name: null, contact_phone: null, note: null,
-      items: [{ device_id: "d-21", kind: "periodic", price: 350000, priority: "normal", intake: { condition: "Tốt", accessories: "", note: "" } }],
+      items: [{ device_id: "d-1-ph", kind: "periodic", price: 350000, priority: "normal", intake: { condition: "Tốt", accessories: "", note: "" } }],
     });
     expect(order.status).toBe(200);
     const jobId = order.body.result.jobs[0].id;
@@ -80,22 +81,16 @@ describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)"
     expect((await rpc(binh, "assignJob", jobId, { assignee_id: "u-binh", reviewer_id: null, due_date: null, priority: "normal" })).status).toBe(403);
     expect((await rpc(dung, "assignJob", jobId, { assignee_id: "u-binh", reviewer_id: null, due_date: null, priority: "normal" })).status).toBe(200);
 
-    // số liệu: lấy mẫu biên bản cân bàn, nhập đúng giá trị danh định
-    const proc = (await call("/api/data/procedures/pr-can-ban", { cookie: binh })).body.row;
-    const readings: Record<string, unknown> = {};
-    for (const s of proc.template.sections) {
-      if (s.kind === "checklist") readings[s.id] = Object.fromEntries(s.items.map((i: { id: string }) => [i.id, true]));
-      if (s.kind === "points") readings[s.id] = Object.fromEntries(s.points.flatMap((p: { id: string; nominal: number }) => [[p.id, [p.nominal]], [p.id + ":down", [p.nominal]]]));
-      if (s.kind === "repeatability") readings[s.id] = { r: Array(s.readings).fill(s.nominal) };
-      if (s.kind === "eccentricity") readings[s.id] = Object.fromEntries(Array.from({ length: s.positions }, (_, i) => [`p${i + 1}`, [s.nominal]]));
-    }
+    // số liệu: lấy mẫu biên bản đầu đo pH (ĐLVN 381:2021), số đọc trong sai số cho phép
+    const proc = (await call("/api/data/procedures/pr-qt-ph", { cookie: binh })).body.row;
+    const readings = genReadings(proc.template);
     const env_ = { temp: 24, humidity: 55, pressure: null };
     // chuẩn quá hạn → máy chủ chặn khi nộp
-    expect((await rpc(binh, "saveReadings", jobId, { env: env_, readings, standard_ids: ["s-qc-m1"], performed_at: "2026-11-06", performed_note: null })).status).toBe(200);
+    expect((await rpc(binh, "saveReadings", jobId, { env: env_, readings, standard_ids: ["s-ph-cu", "s-bath"], performed_at: "2026-11-06", performed_note: null })).status).toBe(200);
     const blocked = await rpc(binh, "submitForReview", jobId);
     expect(blocked.body.error.code).toBe("STANDARD_UNUSABLE");
     // chuẩn còn hạn → nộp được
-    expect((await rpc(binh, "saveReadings", jobId, { env: env_, readings, standard_ids: ["s-qc-m1b"], performed_at: "2026-11-06", performed_note: null })).status).toBe(200);
+    expect((await rpc(binh, "saveReadings", jobId, { env: env_, readings, standard_ids: ["s-ph", "s-bath"], performed_at: "2026-11-06", performed_note: null })).status).toBe(200);
     expect((await rpc(binh, "submitForReview", jobId)).status).toBe(200);
 
     // KĐV không tự soát xét được
@@ -114,7 +109,7 @@ describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)"
     expect(new Set(after.map((c: { number: string }) => c.number)).size).toBe(after.length);
     const seal = (await call(`/api/data/seals?q=${encodeURIComponent(JSON.stringify({ where: { number: "KĐV-000040" } }))}`, { cookie: admin })).body.rows[0];
     expect(seal.status).toBe("used");
-    const dev = (await call("/api/data/devices/d-21", { cookie: admin })).body.row;
+    const dev = (await call("/api/data/devices/d-1-ph", { cookie: admin })).body.row;
     expect(dev.next_due).toBe(cert.valid_to);
 
     // tra cứu công khai, không cần đăng nhập
@@ -126,8 +121,8 @@ describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)"
   it("thao tác lỗi giữa chừng không ghi gì (nguyên tử)", async () => {
     const n0 = (db.raw.prepare("SELECT COUNT(*) AS n FROM rows WHERE tbl='orders'").get() as { n: number }).n;
     const r = await rpc(em, "createOrder", {
-      customer_id: "c-7", branch_id: "br-hn", received_at: "2026-11-06", expected_at: null, onsite: false, contact_name: null, contact_phone: null, note: null,
-      items: [{ device_id: "d-21", kind: "periodic", price: 1, priority: "normal", intake: { condition: "", accessories: "", note: "" } }, { device_id: "khong-ton-tai", kind: "periodic", price: 1, priority: "normal", intake: { condition: "", accessories: "", note: "" } }],
+      customer_id: "c-1", branch_id: "br-hn", received_at: "2026-11-06", expected_at: null, onsite: false, contact_name: null, contact_phone: null, note: null,
+      items: [{ device_id: "d-1-ph", kind: "periodic", price: 1, priority: "normal", intake: { condition: "", accessories: "", note: "" } }, { device_id: "khong-ton-tai", kind: "periodic", price: 1, priority: "normal", intake: { condition: "", accessories: "", note: "" } }],
     });
     expect(r.status).toBe(404);
     const n1 = (db.raw.prepare("SELECT COUNT(*) AS n FROM rows WHERE tbl='orders'").get() as { n: number }).n;
@@ -143,7 +138,7 @@ describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)"
     expect((await call("/api/password", { body: { password: "mat-khau-moi-1", current: "sai" }, cookie: binh })).status).toBe(400);
     expect((await call("/api/password", { body: { user_id: "u-an", password: "mat-khau-moi-1" }, cookie: binh })).status).toBe(403);
     expect((await call("/api/password", { body: { password: "mat-khau-moi-1", current: PW }, cookie: binh })).status).toBe(200);
-    expect((await call("/api/login", { body: { email: "binh@kdviet.vn", password: "mat-khau-moi-1" } })).status).toBe(200);
+    expect((await call("/api/login", { body: { email: "binh@kdqtviet.vn", password: "mat-khau-moi-1" } })).status).toBe(200);
     await call("/api/logout", { body: {}, cookie: binh });
     expect((await call("/api/me", { cookie: binh })).status).toBe(401);
   });
