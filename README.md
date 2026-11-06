@@ -4,6 +4,14 @@ Phần mềm chạy toàn bộ công ty kiểm định phương tiện đo (đo 
 
 Kế hoạch tổng thể: [docs/KE_HOACH.md](docs/KE_HOACH.md). Phong cách giao diện: [DESIGN.md](DESIGN.md). Triển khai máy chủ: [docs/TRIEN_KHAI.md](docs/TRIEN_KHAI.md).
 
+| Tổng quan | Biên bản kiểm định |
+|---|---|
+| ![Tổng quan](docs/screenshots/tong-quan.png) | ![Biên bản](docs/screenshots/bien-ban.png) |
+| **Báo cáo** | **Điện thoại (kiểm định viên)** |
+| ![Báo cáo](docs/screenshots/bao-cao.png) | ![Điện thoại](docs/screenshots/dien-thoai.png) |
+
+Giấy chứng nhận in ra (A4, có mã QR tra cứu): [docs/screenshots/gcn-mau.pdf](docs/screenshots/gcn-mau.pdf).
+
 ## Chạy thử ngay
 
 ```bash
