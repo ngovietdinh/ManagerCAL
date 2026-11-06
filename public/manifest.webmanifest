@@ -1,0 +1,16 @@
+{
+  "name": "ManagerCAL – Quản lý kiểm định",
+  "short_name": "ManagerCAL",
+  "description": "Quản lý công ty kiểm định phương tiện đo: tiếp nhận, biên bản, giấy chứng nhận, tem, chuẩn, báo cáo",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fa",
+  "theme_color": "#1e56a0",
+  "lang": "vi",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

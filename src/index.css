@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-doc: "Tinos", "Times New Roman", Times, serif;
+  /* xanh kiểm định – màu nhấn duy nhất (xem DESIGN.md) */
+  --color-brand-50: #e6eef9;
+  --color-brand-100: #cfdcf2;
+  --color-brand-200: #a9c1e6;
+  --color-brand-300: #7ea2d6;
+  --color-brand-400: #5282c0;
+  --color-brand-500: #2f6ab0;
+  --color-brand-600: #1e56a0;
+  --color-brand-700: #174685;
+  --color-brand-800: #123768;
+  --color-brand-900: #0d274a;
+  /* vàng đồng – chỉ cho tem và con số nổi bật */
+  --color-seal-100: #fbf3dc;
+  --color-seal-600: #b8860b;
+  --color-seal-800: #7a5706;
+}
+
+:root { color-scheme: light; -webkit-tap-highlight-color: transparent; }
+:root.dark { color-scheme: dark; }
+html, body, #root { min-height: 100%; }
+body { @apply bg-[#f4f6fa] text-[#15213a] antialiased dark:bg-[#0b1220] dark:text-[#e8edf5]; font-size: 14px; }
+
+@layer components {
+  .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900; }
+  .input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition
+      placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
+      disabled:bg-slate-100 disabled:text-slate-500
+      dark:border-slate-700 dark:bg-slate-900 dark:disabled:bg-slate-800;
+  }
+  .input-sm { @apply rounded-lg px-2 py-1 text-sm; }
+  .label { @apply mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400; }
+  .table { @apply w-full text-sm; }
+  .table th { @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400; }
+  .table td { @apply border-b border-slate-100 px-3 py-2 align-middle dark:border-slate-800; }
+  .table tbody tr:hover td { @apply bg-slate-50/70 dark:bg-slate-800/40; }
+  .table .num, .num { @apply text-right tabular-nums; }
+  .link { @apply font-medium text-brand-700 hover:underline dark:text-brand-300; }
+  .seal-no { @apply rounded-md bg-seal-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-seal-800; }
+
+  /* Tờ tài liệu in (GCN, thông báo, phiếu tiếp nhận): khổ A4, Times */
+  .doc {
+    font-family: var(--font-doc); color: #000; background: #fff; width: 210mm; min-height: 296mm; padding: 18mm 20mm 18mm 25mm;
+    margin: 0 auto; font-size: 13pt; line-height: 1.45; box-shadow: 0 2px 16px rgba(21, 33, 58, .18);
+  }
+  .doc table { border-collapse: collapse; width: 100%; }
+  .doc table.grid th, .doc table.grid td { border: 1px solid #000; padding: 3px 6px; font-size: 11.5pt; }
+  .doc .center { text-align: center; }
+  .doc h1 { font-size: 18pt; font-weight: 700; text-align: center; text-transform: uppercase; margin: 8pt 0 2pt; }
+  .doc .sub { text-align: center; font-style: italic; }
+}
+
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .doc { box-shadow: none !important; margin: 0; width: auto; min-height: auto; padding: 0; }
+  @page { size: A4; margin: 15mm 18mm 15mm 22mm; }
+}
