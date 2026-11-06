@@ -45,6 +45,16 @@ Gắn tên miền riêng: Cloudflare dashboard → Workers → managercal → Se
 
 **Cách dự phòng – `npm run deploy:embedded`**: gói giao diện vào thẳng mã Worker (không dùng tính năng tệp tĩnh của Cloudflare). Dùng khi `npm run deploy` lỗi ở bước tải tệp (`assets/upload … 401`), vd. chạy sau một proxy ghi đè header Authorization. Bản đang chạy được đưa lên bằng cách này. Giới hạn: mã Worker sau nén ≤ 3 MB (gói miễn phí); hiện khoảng 630 KB.
 
+## Quên mật khẩu
+
+| Ai quên | Cách lấy lại |
+|---|---|
+| Nhân viên | Quản trị vào **Nhân sự, ủy quyền → Mật khẩu** ở dòng người đó, đặt mật khẩu mới. Người đó bị đăng xuất khỏi mọi máy. |
+| Quản trị (không ai khác đặt lại được) | Chạy trên máy có quyền vào tài khoản Cloudflare: `npm run reset-password -- email@congty.vn`. Lệnh in ra mật khẩu tạm; đăng nhập rồi đổi ngay (bấm ảnh đại diện → Đổi mật khẩu). Muốn tự chọn: `npm run reset-password -- email@congty.vn MatKhauMoi`. |
+
+Nên có ít nhất **hai người có vai trò Quản trị** để không phụ thuộc vào cách thứ hai.
+Đăng nhập sai 8 lần liên tiếp sẽ bị khoá 15 phút; đặt lại mật khẩu bằng lệnh trên cũng gỡ khoá này.
+
 ## Sao lưu
 
 - Trong app: **Cài đặt → Dữ liệu → Sao lưu (tải JSON)** (quản trị). Khôi phục từ tệp cũng ở đó; mật khẩu không nằm trong tệp sao lưu và được giữ nguyên.

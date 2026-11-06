@@ -14,7 +14,8 @@
     "dev:cf": "npm run build && wrangler d1 migrations apply managercal --local && wrangler dev --port 8787",
     "cf:setup": "node scripts/cf-setup.mjs",
     "test:e2e:server": "playwright test -c playwright.server.config.ts",
-    "deploy:embedded": "npm run build && node scripts/embed-assets.mjs && wrangler d1 migrations apply managercal --remote -c wrangler.embedded.json && wrangler deploy -c wrangler.embedded.json"
+    "deploy:embedded": "npm run build && node scripts/embed-assets.mjs && wrangler d1 migrations apply managercal --remote -c wrangler.embedded.json && wrangler deploy -c wrangler.embedded.json",
+    "reset-password": "node scripts/reset-password.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
