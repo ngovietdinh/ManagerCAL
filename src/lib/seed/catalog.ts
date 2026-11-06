@@ -6,6 +6,7 @@
 // =============================================================================
 import type { Field, InstrumentType, Procedure, Template, TemplatePoint } from "../types";
 import { nowIso } from "../store/repo";
+import { FIELDS_QT, INSTRUMENT_TYPES_QT, PROCEDURES_QT } from "./monitoring";
 
 const t = nowIso();
 const pts = (nominals: number[], mpe?: TemplatePoint["mpe"]): TemplatePoint[] => nominals.map((n, i) => ({ id: `p${i + 1}`, nominal: n, ...(mpe ? { mpe } : {}) }));
@@ -17,6 +18,7 @@ export const FIELDS: Field[] = [
   { id: "f-dt", code: "DT", name: "Dung tích – lưu lượng", active: true, created_at: t },
   { id: "f-di", code: "DI", name: "Điện", active: true, created_at: t },
   { id: "f-dl", code: "DL", name: "Độ dài", active: true, created_at: t },
+  ...FIELDS_QT,
 ];
 
 const CHECKLIST_KL = { id: "ck", kind: "checklist" as const, title: "Kiểm tra bên ngoài và kỹ thuật", items: [
@@ -109,6 +111,7 @@ export const PROCEDURES: Procedure[] = [
           { id: "p4", label: "5 m", nominal: 5000, mpe: { kind: "abs", value: 1.3 } },
         ] },
     ] } },
+  ...PROCEDURES_QT,
 ];
 
 export const INSTRUMENT_TYPES: InstrumentType[] = [
@@ -124,6 +127,7 @@ export const INSTRUMENT_TYPES: InstrumentType[] = [
   { id: "it-cong-to-1p", code: "CT-1P", name: "Công tơ điện 1 pha", field_id: "f-di", group2: true, cycle_months: 60, procedure_id: "pr-cong-to-1p", default_price: 60000, active: true, note: null, created_at: t },
   { id: "it-cong-to-3p", code: "CT-3P", name: "Công tơ điện 3 pha", field_id: "f-di", group2: true, cycle_months: 36, procedure_id: "pr-cong-to-3p", default_price: 180000, active: true, note: null, created_at: t },
   { id: "it-thuoc-cuon", code: "THUOC-C", name: "Thước cuộn", field_id: "f-dl", group2: true, cycle_months: 24, procedure_id: "pr-thuoc-cuon", default_price: 80000, active: true, note: null, created_at: t },
+  ...INSTRUMENT_TYPES_QT,
 ];
 
 export const DEFAULT_SETTINGS = {

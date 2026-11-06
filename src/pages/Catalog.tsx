@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useData, useIndex, useTable } from "@/app/data";
 import CatTemplateEditor from "@/components/CatTemplateEditor";
 import { Badge, Button, Checkbox, Empty, Field, Input, Loading, Modal, NumberInput, PageHeader, Select, Tabs, Textarea, Toggle, useUi } from "@/components/ui";
@@ -17,11 +17,42 @@ export default function Catalog() {
       <Tabs value={tab} onChange={setTab} className="mb-4 w-fit max-w-full" items={[
         { value: "fields", label: "Lĩnh vực đo" }, { value: "types", label: "Loại phương tiện đo" }, { value: "procedures", label: "Quy trình kiểm định" }, { value: "branches", label: "Chi nhánh" },
       ]} />
+      <LibraryBanner />
       {tab === "fields" && <FieldsTab />}
       {tab === "types" && <TypesTab />}
       {tab === "procedures" && <ProceduresTab />}
       {tab === "branches" && <BranchesTab />}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+/** Thư viện quy trình đi kèm phần mềm có mục mới (vd. quan trắc tự động) → thêm vào danh mục đang dùng */
+function LibraryBanner() {
+  const { svc, can, version } = useData();
+  const ui = useUi();
+  const [miss, setMiss] = useState<{ fields: number; procedures: number; types: number; names: string[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    svc.libraryMissing().then((m) => setMiss({ fields: m.fields.length, procedures: m.procedures.length, types: m.types.length, names: m.procedures.map((p) => p.code) }))
+      .catch(() => setMiss(null));
+  }, [svc, version]);
+  if (!miss || miss.procedures + miss.types + miss.fields === 0) return null;
+  const run = async () => {
+    setBusy(true);
+    try {
+      const r = await svc.importLibrary();
+      ui.toast(`Đã thêm ${r.procedures} quy trình, ${r.types} loại phương tiện đo, ${r.fields} lĩnh vực`);
+    } catch (e) { ui.error(e); } finally { setBusy(false); }
+  };
+  return (
+    <div className="card mb-4 flex flex-wrap items-center gap-3 px-5 py-4">
+      <div className="min-w-0 flex-1 text-sm">
+        <div className="font-semibold">Thư viện có {miss.procedures} quy trình, {miss.types} loại phương tiện đo mới chưa có trong danh mục</div>
+        <div className="mt-0.5 text-[var(--ink-3)]">{[...new Set(miss.names)].join(", ")}. Chỉ thêm mục còn thiếu, không sửa mục bạn đã chỉnh.</div>
+      </div>
+      {can("catalog") ? <Button loading={busy} onClick={run}>Thêm vào danh mục</Button> : <span className="text-xs text-[var(--ink-3)]">Cần quyền Quản lý chất lượng hoặc Quản trị</span>}
+    </div>
   );
 }
 

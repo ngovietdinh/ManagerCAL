@@ -9,7 +9,7 @@ export const REMOTE_METHODS = [
   "assignJob", "saveReadings", "submitForReview", "reviewJob", "returnFromApproval", "approveAndIssue", "returnDevice", "cancelJob",
   "replaceCertificate", "revokeCertificate",
   "createSealBatch", "assignSeals", "voidSeal",
-  "runDailyChecks",
+  "runDailyChecks", "importLibrary",
 ] as const;
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export const isRemoteMethod = (m: string): m is RemoteMethod => (REMOTE_METHODS as readonly string[]).includes(m);

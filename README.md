@@ -67,6 +67,10 @@ npm run test:e2e:server  # Playwright chế độ máy chủ: Worker + D1 tại 
 npm run build       # typecheck + build
 ```
 
+## Thiết bị quan trắc môi trường tự động
+
+Có sẵn 16 quy trình cho trạm quan trắc nước thải, khí thải, không khí xung quanh: kiểm định đầu đo theo ĐLVN 380–389:2021 và ĐLVN 90:2017, kiểm tra độ chính xác tương đối (RA) hằng năm theo TT 10/2021/TT-BTNMT. Căn cứ và bảng yêu cầu: [docs/QUAN_TRAC_TU_DONG.md](docs/QUAN_TRAC_TU_DONG.md).
+
 ## Lưu ý pháp lý
 
 Danh mục loại phương tiện đo, chu kỳ kiểm định và mã quy trình trong dữ liệu mẫu lấy theo TT 23/2013/TT-BKHCN (sửa đổi TT 07/2019) và các ĐLVN theo hiểu biết tại thời điểm viết; **phải đối chiếu với văn bản hiện hành** trước khi dùng thật. Tất cả đều sửa được trong mục Danh mục, quy trình.

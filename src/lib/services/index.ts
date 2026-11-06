@@ -387,9 +387,10 @@ export class Services {
     const branch = job.branch_id ? await this.repo.get("branches", job.branch_id) : null;
     if (!customer || !device) throw new BizError("NOT_FOUND");
 
-    // Tem: chỉ cấp khi đạt
+    // Tem: chỉ cấp khi đạt, và chỉ cho kiểm định (biên bản kiểm tra RA của hệ thống quan trắc không cấp tem)
+    const isRa = procedure.doc_kind === "ra_report";
     let seal: Seal | null = null;
-    if (pass) {
+    if (pass && !isRa) {
       if (data.seal_no) {
         const found = (await this.repo.list("seals", { where: { number: data.seal_no } as Partial<Seal> }))[0];
         if (!found || !["stock", "assigned"].includes(found.status)) throw new BizError("SEAL_UNAVAILABLE", { number: data.seal_no });
@@ -408,7 +409,7 @@ export class Services {
       customer: { name: customer.name, address: customer.address, tax_code: customer.tax_code },
       device: { name: device.name, manufacturer: device.manufacturer, model: device.model, serial: device.serial, range_text: device.range_text, accuracy_class: device.accuracy_class, resolution_text: device.resolution_text, location: device.location, customer_code: device.customer_code },
       instrument_type: { code: type.code, name: type.name, cycle_months: type.cycle_months },
-      procedure: { code: procedure.code, name: procedure.name, version: procedure.version },
+      procedure: { code: procedure.code, name: procedure.name, version: procedure.version, ...(procedure.doc_kind ? { doc_kind: procedure.doc_kind } : {}) },
       standards: standards.map((s) => ({ code: s.code, name: s.name, serial: s.serial, cal_cert_no: s.cal_cert_no, cal_due: s.cal_due })),
       env: job.env, result, performer: performer ? { full_name: performer.full_name, inspector_card_no: performer.inspector_card_no } : null,
       signer: { full_name: me.full_name, title: me.title }, kind: job.kind, performed_at: job.performed_at, place: data.place,
@@ -506,6 +507,35 @@ export class Services {
   async lookupCertificate(number: string): Promise<Certificate | null> {
     const list = await this.repo.list("certificates", { where: { number: number.trim() } as Partial<Certificate> });
     return list[0] ?? null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Thư viện quy trình có sẵn trong phần mềm (vd. quan trắc tự động) → thêm vào danh mục đang dùng
+  // ---------------------------------------------------------------------------
+  /** Những mục của thư viện chưa có trong danh mục (theo id) */
+  async libraryMissing(): Promise<{ fields: Field[]; procedures: Procedure[]; types: InstrumentType[] }> {
+    const { LIBRARY } = await import("../seed/library");
+    const [f, p, t] = await Promise.all([this.repo.list("fields"), this.repo.list("procedures"), this.repo.list("instrument_types")]);
+    const has = (rows: { id: string }[]) => new Set(rows.map((r) => r.id));
+    const hf = has(f), hp = has(p), ht = has(t);
+    return {
+      fields: LIBRARY.fields.filter((x) => !hf.has(x.id)),
+      procedures: LIBRARY.procedures.filter((x) => !hp.has(x.id)),
+      types: LIBRARY.types.filter((x) => !ht.has(x.id)),
+    };
+  }
+
+  /** Thêm các mục còn thiếu của thư viện; không sửa mục đã có (người dùng có thể đã chỉnh) */
+  async importLibrary(): Promise<{ fields: number; procedures: number; types: number }> {
+    this.require("catalog");
+    const miss = await this.libraryMissing();
+    const t = nowIso();
+    for (const x of miss.fields) await this.repo.insert("fields", { ...x, created_at: t });
+    for (const x of miss.procedures) await this.repo.insert("procedures", { ...x, created_at: t });
+    for (const x of miss.types) await this.repo.insert("instrument_types", { ...x, created_at: t });
+    const counts = { fields: miss.fields.length, procedures: miss.procedures.length, types: miss.types.length };
+    await this.audit("import_library", "procedures", "library", null, counts);
+    return counts;
   }
 
   // ---------------------------------------------------------------------------

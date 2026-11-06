@@ -226,7 +226,7 @@ function RecordEditor({ job }: { job: Job }) {
   const fieldStds = standards.filter((s) => s.field_id === fieldId || stdIds.includes(s.id));
 
   return (
-    <Card title={<span>Biên bản kiểm định <span className="ml-1 text-xs font-normal text-slate-500">{procedure.code} · {procedure.name}</span></span>}
+    <Card title={<span>{procedure.doc_kind === "ra_report" ? "Biên bản kiểm tra RA" : "Biên bản kiểm định"} <span className="ml-1 text-xs font-normal text-slate-500">{procedure.code} · {procedure.name}</span></span>}
       actions={result && (result.complete ? <Badge tone={result.pass ? "green" : "red"}>{result.pass ? "Đạt" : "Không đạt"}</Badge> : <Badge tone="amber">Chưa đủ số liệu ({result.missing.length})</Badge>)}>
       <div className="mb-5 grid gap-4 md:grid-cols-2">
         <div>
@@ -268,6 +268,13 @@ function RecordEditor({ job }: { job: Job }) {
         </div>
       </div>
 
+      {(procedure.legal || procedure.note) && (
+        <details className="mb-4 rounded-xl border border-[var(--line-2)] bg-[rgba(var(--ink-rgb),0.025)] px-4 py-2.5 text-sm">
+          <summary className="cursor-pointer font-semibold">Yêu cầu của quy trình {procedure.code}</summary>
+          {procedure.legal && <p className="mt-2 text-[var(--ink-2)]">{procedure.legal}</p>}
+          {procedure.note && <p className="mt-1 text-xs text-[var(--ink-3)]">{procedure.note}</p>}
+        </details>
+      )}
       <JobRecordEditor template={procedure.template} texts={texts} checks={checks} result={result!}
         onText={(k, v) => { setTexts((t) => ({ ...t, [k]: v })); setDirty(true); }}
         onCheck={(sec, item, v) => { setChecks((c) => ({ ...c, [sec]: { ...(c[sec] ?? {}), [item]: v } })); setDirty(true); }} />
@@ -405,7 +412,10 @@ function IssueModal({ job, onClose }: { job: Job; onClose: () => void }) {
   const orders = useIndex("orders");
   const { rows: settings } = useTable("settings");
   const { rows: seals } = useTable("seals");
+  const procedures = useIndex("procedures");
+  const isRa = job.procedure_id ? procedures[job.procedure_id]?.doc_kind === "ra_report" : false;
   const pass = job.result?.pass === true;
+  const docName = isRa ? "biên bản RA" : pass ? "GCN" : "thông báo";
   const order = orders[job.order_id];
   const customer = customers[job.customer_id];
   const [issuedAt, setIssuedAt] = useState(todayStr());
@@ -431,15 +441,15 @@ function IssueModal({ job, onClose }: { job: Job; onClose: () => void }) {
   const submit = async () => {
     setBusy(true);
     try {
-      const r = await svc.approveAndIssue(job.id, { issued_at: issuedAt, seal_no: pass && sealNo.trim() ? sealNo.trim() : null, place });
-      ui.toast(`Đã phát hành ${pass ? "GCN" : "thông báo"} số ${r.certificate.number}`);
+      const r = await svc.approveAndIssue(job.id, { issued_at: issuedAt, seal_no: pass && !isRa && sealNo.trim() ? sealNo.trim() : null, place });
+      ui.toast(`Đã phát hành ${docName} số ${r.certificate.number}`);
       setDone({ id: r.certificate.id, number: r.certificate.number });
     } catch (e) { ui.error(e); } finally { setBusy(false); }
   };
 
   if (done) return (
-    <Modal open onClose={onClose} title="Đã phát hành" footer={<><Button variant="secondary" onClick={onClose}>Đóng</Button><Link to={`/certificates/${done.id}`}><Button icon={<Award className="h-4 w-4" />}>Xem, in {pass ? "GCN" : "thông báo"}</Button></Link></>}>
-      <p className="text-sm">{pass ? "Giấy chứng nhận kiểm định" : "Thông báo kết quả kiểm định không đạt"} số <span className="font-semibold">{done.number}</span> đã được ký và lưu. Bản phát hành không sửa được; nếu sai, dùng chức năng thay thế hoặc thu hồi.</p>
+    <Modal open onClose={onClose} title="Đã phát hành" footer={<><Button variant="secondary" onClick={onClose}>Đóng</Button><Link to={`/certificates/${done.id}`}><Button icon={<Award className="h-4 w-4" />}>Xem, in {docName}</Button></Link></>}>
+      <p className="text-sm">{isRa ? "Biên bản kiểm tra độ chính xác tương đối" : pass ? "Giấy chứng nhận kiểm định" : "Thông báo kết quả kiểm định không đạt"} số <span className="font-semibold">{done.number}</span> đã được ký và lưu. Bản phát hành không sửa được; nếu sai, dùng chức năng thay thế hoặc thu hồi.</p>
     </Modal>
   );
 
@@ -448,10 +458,12 @@ function IssueModal({ job, onClose }: { job: Job; onClose: () => void }) {
       footer={<><Button variant="secondary" onClick={onClose}>Huỷ</Button><Button icon={<FileSignature className="h-4 w-4" />} loading={busy} disabled={!sealOk || !issuedAt} onClick={submit}>Ký và phát hành</Button></>}>
       <div className="space-y-3">
         <div className={clsx("rounded-xl p-3 text-sm", pass ? "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-200")}>
-          {pass ? <><span className="font-semibold">Kết luận: Đạt.</span> Phát hành Giấy chứng nhận kiểm định và cấp tem.</> : <><span className="font-semibold">Kết luận: Không đạt.</span> Phát hành Thông báo kết quả kiểm định không đạt, không cấp tem.</>}
+          {isRa
+            ? <><span className="font-semibold">Kết luận: {pass ? "Đạt" : "Không đạt"}.</span> Phát hành Biên bản kiểm tra độ chính xác tương đối (TT 10/2021/TT-BTNMT), không cấp tem.</>
+            : pass ? <><span className="font-semibold">Kết luận: Đạt.</span> Phát hành Giấy chứng nhận kiểm định và cấp tem.</> : <><span className="font-semibold">Kết luận: Không đạt.</span> Phát hành Thông báo kết quả kiểm định không đạt, không cấp tem.</>}
         </div>
         <Field label="Ngày phát hành"><Input type="date" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} /></Field>
-        {pass && (
+        {pass && !isRa && (
           <Field label="Số tem kiểm định" hint={sealState ?? "Để trống nếu chưa dán tem"} error={sealNo.trim() && !sealOk ? sealState : null}>
             <Input value={sealNo} onChange={(e) => setSealNo(e.target.value)} className="font-mono" placeholder="KĐV-000001" />
           </Field>

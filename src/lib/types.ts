@@ -109,6 +109,8 @@ export interface InstrumentType {   // loại phương tiện đo
 }
 
 export type ProcedureStatus = "draft" | "active" | "retired";
+/** Loại tài liệu phát hành: GCN kiểm định (có tem) hoặc biên bản kiểm tra RA của hệ thống quan trắc (không tem) */
+export type DocKind = "verification" | "ra_report";
 export interface Procedure {        // quy trình kiểm định (ĐLVN / nội bộ), có phiên bản
   id: Id;
   code: string;                     // ĐLVN 16:2009
@@ -116,6 +118,9 @@ export interface Procedure {        // quy trình kiểm định (ĐLVN / nội 
   version: string;
   effective_from: IsoDate;
   status: ProcedureStatus;
+  doc_kind?: DocKind;
+  /** căn cứ pháp lý / ghi chú áp dụng hiển thị cho kiểm định viên */
+  legal?: string;
   template: Template;
   note: string | null;
   created_at: IsoDateTime;
@@ -130,6 +135,17 @@ export type MpeSpec =
 
 export interface TemplatePoint { id: string; label?: string; nominal: number; mpe?: MpeSpec }
 
+/**
+ * Các loại mục của mẫu biên bản:
+ *  - checklist      kiểm tra bên ngoài / kỹ thuật (Đạt / Không đạt)
+ *  - points         sai số tại các điểm đo; `ref_input`: kiểm định viên nhập giá trị chuẩn (theo chứng nhận của
+ *                   dung dịch / khí chuẩn) thay cho giá trị danh định; `relative`: sai số tính theo % giá trị chuẩn
+ *  - repeatability  độ lặp lại: `method` "range" (chênh lệch lớn nhất, cân) hoặc "stdev" (độ lệch chuẩn, ĐLVN 38x)
+ *  - eccentricity   độ lệch tâm (cân)
+ *  - drift          độ trôi: đo lại sau từng khoảng thời gian, so với lần đo đầu (ĐLVN 38x: 2 giờ; ĐLVN 389: 24 giờ)
+ *  - linearity      độ tuyến tính toàn thang đo từ các điểm của một mục "points" (R² ≥ min_r2)
+ *  - ra             độ chính xác tương đối của hệ thống quan trắc tự động (TT 10/2021/TT-BTNMT, Phụ lục 12)
+ */
 export type TemplateSection =
   | { id: string; kind: "checklist"; title: string; items: { id: string; label: string }[] }
   | {
@@ -138,10 +154,15 @@ export type TemplateSection =
       directions: 1 | 2;             // 2 = tăng và giảm (có độ trễ/hysteresis)
       mpe: MpeSpec;
       hysteresis_mpe?: MpeSpec;      // giới hạn độ trễ (mặc định = mpe)
+      ref_input?: boolean;
+      relative?: boolean;
       points: TemplatePoint[];
     }
-  | { id: string; kind: "repeatability"; title: string; unit: string; decimals: number; nominal: number; readings: number; limit: MpeSpec }
-  | { id: string; kind: "eccentricity"; title: string; unit: string; decimals: number; nominal: number; positions: number; mpe: MpeSpec };
+  | { id: string; kind: "repeatability"; title: string; unit: string; decimals: number; nominal: number; readings: number; limit: MpeSpec; method?: "range" | "stdev"; ref_input?: boolean }
+  | { id: string; kind: "eccentricity"; title: string; unit: string; decimals: number; nominal: number; positions: number; mpe: MpeSpec }
+  | { id: string; kind: "drift"; title: string; unit: string; decimals: number; nominal: number; readings: number; interval: string; limit: MpeSpec; ref_input?: boolean }
+  | { id: string; kind: "linearity"; title: string; source: string; min_r2: number }
+  | { id: string; kind: "ra"; title: string; unit: string; decimals: number; pairs: number; limit_pct: number; qcvn_sub?: boolean };
 
 export interface Template {
   env_limits: { temp?: [number, number]; humidity?: [number, number] };
@@ -155,6 +176,10 @@ export type Readings = Record<string, SectionReadings>;
 export interface EvalRow {
   label: string; nominal: number | null; readings: (number | null)[]; mean: number | null;
   error: number | null; mpe: number | null; pass: boolean | null; note?: string;
+  /** đơn vị riêng của cột sai số / giới hạn (vd. "%" khi sai số tương đối, "" cho R²); mặc định = đơn vị của mục */
+  unit?: string;
+  /** "≥" khi giới hạn là cận dưới (R²) */
+  cmp?: "≥";
 }
 export interface EvalSection { id: string; title: string; kind: TemplateSection["kind"]; rows: EvalRow[]; pass: boolean | null; unit?: string; decimals?: number }
 export interface EvalResult { sections: EvalSection[]; pass: boolean | null; complete: boolean; missing: string[] }
@@ -310,7 +335,7 @@ export interface CertSnapshot {
   customer: Pick<Customer, "name" | "address" | "tax_code">;
   device: Pick<Device, "name" | "manufacturer" | "model" | "serial" | "range_text" | "accuracy_class" | "resolution_text" | "location" | "customer_code">;
   instrument_type: Pick<InstrumentType, "code" | "name" | "cycle_months">;
-  procedure: Pick<Procedure, "code" | "name" | "version"> | null;
+  procedure: (Pick<Procedure, "code" | "name" | "version"> & { doc_kind?: DocKind }) | null;
   standards: Pick<Standard, "code" | "name" | "serial" | "cal_cert_no" | "cal_due">[];
   env: Job["env"];
   result: EvalResult | null;

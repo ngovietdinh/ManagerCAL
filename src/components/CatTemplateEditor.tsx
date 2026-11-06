@@ -50,9 +50,15 @@ const newSection = (kind: TemplateSection["kind"]): TemplateSection => {
     case "points": return { id, kind, title: "Kiểm tra sai số", unit: "", decimals: 2, readings: 1, directions: 1, mpe: { kind: "abs", value: 1 }, points: [{ id: uid(), nominal: 0 }] };
     case "repeatability": return { id, kind, title: "Kiểm tra độ lặp lại", unit: "", decimals: 2, nominal: 0, readings: 3, limit: { kind: "abs", value: 1 } };
     case "eccentricity": return { id, kind, title: "Kiểm tra độ lệch tâm", unit: "", decimals: 2, nominal: 0, positions: 5, mpe: { kind: "abs", value: 1 } };
+    case "drift": return { id, kind, title: "Kiểm tra độ trôi", unit: "", decimals: 2, nominal: 0, readings: 3, interval: "2 giờ", limit: { kind: "pct_reading", value: 5 }, ref_input: true };
+    case "linearity": return { id, kind, title: "Kiểm tra độ tuyến tính", source: "", min_r2: 0.99 };
+    case "ra": return { id, kind, title: "Đánh giá độ chính xác tương đối (RA)", unit: "", decimals: 2, pairs: 9, limit_pct: 20 };
   }
 };
-const KIND_LABEL: Record<TemplateSection["kind"], string> = { checklist: "Bảng kiểm (đạt/không)", points: "Điểm đo – sai số", repeatability: "Độ lặp lại", eccentricity: "Độ lệch tâm" };
+const KIND_LABEL: Record<TemplateSection["kind"], string> = {
+  checklist: "Bảng kiểm (đạt/không)", points: "Điểm đo – sai số", repeatability: "Độ lặp lại", eccentricity: "Độ lệch tâm",
+  drift: "Độ trôi", linearity: "Độ tuyến tính", ra: "Độ chính xác tương đối (RA)",
+};
 
 export default function CatTemplateEditor({ value, onChange }: { value: Template; onChange: (t: Template) => void }) {
   const [showJson, setShowJson] = useState(false);
@@ -119,6 +125,8 @@ export default function CatTemplateEditor({ value, onChange }: { value: Template
                 <Field label="Số thập phân"><Input type="number" min={0} max={6} value={s.decimals} onChange={(e) => setSection(i, { ...s, decimals: Number(e.target.value) })} /></Field>
                 <Field label="Số lần đọc mỗi điểm"><Input type="number" min={1} max={10} value={s.readings} onChange={(e) => setSection(i, { ...s, readings: Math.max(1, Number(e.target.value)) })} /></Field>
                 <Field label="Chiều đo"><Select value={s.directions} onChange={(e) => setSection(i, { ...s, directions: Number(e.target.value) as 1 | 2 })}><option value={1}>Một chiều</option><option value={2}>Tăng và giảm (có độ trễ)</option></Select></Field>
+                <Field label="Giá trị chuẩn"><Select value={s.ref_input ? "1" : "0"} onChange={(e) => setSection(i, { ...s, ref_input: e.target.value === "1" })}><option value="0">Dùng giá trị danh định</option><option value="1">KĐV nhập theo chứng nhận chuẩn</option></Select></Field>
+                <Field label="Cách tính sai số"><Select value={s.relative ? "1" : "0"} onChange={(e) => setSection(i, { ...s, relative: e.target.value === "1" })}><option value="0">Tuyệt đối (đơn vị đo)</option><option value="1">Tương đối (% giá trị chuẩn)</option></Select></Field>
               </div>
               <MpeEditor value={s.mpe} onChange={(m) => m && setSection(i, { ...s, mpe: m })} />
               {s.directions === 2 && <MpeEditor label="Giới hạn độ trễ (trống = bằng MPE)" allowNone value={s.hysteresis_mpe} onChange={(m) => { const n = { ...s }; if (m) n.hysteresis_mpe = m; else delete n.hysteresis_mpe; setSection(i, n); }} />}
@@ -146,10 +154,12 @@ export default function CatTemplateEditor({ value, onChange }: { value: Template
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Field label="Đơn vị"><Input value={s.unit} onChange={(e) => setSection(i, { ...s, unit: e.target.value })} /></Field>
                 <Field label="Số thập phân"><Input type="number" min={0} max={6} value={s.decimals} onChange={(e) => setSection(i, { ...s, decimals: Number(e.target.value) })} /></Field>
-                <Field label="Tải danh định"><Input type="number" step="any" value={s.nominal} onChange={(e) => setSection(i, { ...s, nominal: Number(e.target.value) })} /></Field>
+                <Field label="Tải / giá trị danh định"><Input type="number" step="any" value={s.nominal} onChange={(e) => setSection(i, { ...s, nominal: Number(e.target.value) })} /></Field>
                 <Field label="Số lần đọc"><Input type="number" min={2} max={20} value={s.readings} onChange={(e) => setSection(i, { ...s, readings: Math.max(2, Number(e.target.value)) })} /></Field>
+                <Field label="Cách đánh giá"><Select value={s.method ?? "range"} onChange={(e) => setSection(i, { ...s, method: e.target.value as "range" | "stdev" })}><option value="range">Chênh lệch lớn nhất (cân)</option><option value="stdev">Độ lệch chuẩn s (ĐLVN 38x)</option></Select></Field>
+                <Field label="Giá trị chuẩn"><Select value={s.ref_input ? "1" : "0"} onChange={(e) => setSection(i, { ...s, ref_input: e.target.value === "1" })}><option value="0">Dùng giá trị danh định</option><option value="1">KĐV nhập theo chứng nhận chuẩn</option></Select></Field>
               </div>
-              <MpeEditor label="Giới hạn chênh lệch lớn nhất" value={s.limit} onChange={(m) => m && setSection(i, { ...s, limit: m })} />
+              <MpeEditor label={s.method === "stdev" ? "Độ lệch chuẩn cho phép" : "Giới hạn chênh lệch lớn nhất"} value={s.limit} onChange={(m) => m && setSection(i, { ...s, limit: m })} />
             </div>
           )}
           {s.kind === "eccentricity" && (
@@ -161,6 +171,39 @@ export default function CatTemplateEditor({ value, onChange }: { value: Template
                 <Field label="Số vị trí"><Input type="number" min={2} max={9} value={s.positions} onChange={(e) => setSection(i, { ...s, positions: Math.max(2, Number(e.target.value)) })} /></Field>
               </div>
               <MpeEditor value={s.mpe} onChange={(m) => m && setSection(i, { ...s, mpe: m })} />
+            </div>
+          )}
+          {s.kind === "drift" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Field label="Đơn vị"><Input value={s.unit} onChange={(e) => setSection(i, { ...s, unit: e.target.value })} /></Field>
+                <Field label="Số thập phân"><Input type="number" min={0} max={6} value={s.decimals} onChange={(e) => setSection(i, { ...s, decimals: Number(e.target.value) })} /></Field>
+                <Field label="Giá trị danh định"><Input type="number" step="any" value={s.nominal} onChange={(e) => setSection(i, { ...s, nominal: Number(e.target.value) })} /></Field>
+                <Field label="Số lần đo (kể cả lần đầu)"><Input type="number" min={2} max={10} value={s.readings} onChange={(e) => setSection(i, { ...s, readings: Math.max(2, Number(e.target.value)) })} /></Field>
+                <Field label="Khoảng cách giữa các lần"><Input value={s.interval} onChange={(e) => setSection(i, { ...s, interval: e.target.value })} placeholder="2 giờ" /></Field>
+                <Field label="Giá trị chuẩn"><Select value={s.ref_input ? "1" : "0"} onChange={(e) => setSection(i, { ...s, ref_input: e.target.value === "1" })}><option value="0">Dùng giá trị danh định</option><option value="1">KĐV nhập theo chứng nhận chuẩn</option></Select></Field>
+              </div>
+              <MpeEditor label="Độ trôi cho phép" value={s.limit} onChange={(m) => m && setSection(i, { ...s, limit: m })} />
+            </div>
+          )}
+          {s.kind === "linearity" && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Field label="Lấy số liệu từ mục">
+                <Select value={s.source} onChange={(e) => setSection(i, { ...s, source: e.target.value })}>
+                  <option value="">– Chọn mục điểm đo –</option>
+                  {value.sections.filter((x) => x.kind === "points").map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+                </Select>
+              </Field>
+              <Field label="R² tối thiểu"><Input type="number" step="0.001" value={s.min_r2} onChange={(e) => setSection(i, { ...s, min_r2: Number(e.target.value) })} /></Field>
+            </div>
+          )}
+          {s.kind === "ra" && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Field label="Đơn vị"><Input value={s.unit} onChange={(e) => setSection(i, { ...s, unit: e.target.value })} /></Field>
+              <Field label="Số thập phân"><Input type="number" min={0} max={6} value={s.decimals} onChange={(e) => setSection(i, { ...s, decimals: Number(e.target.value) })} /></Field>
+              <Field label="Số cặp số liệu (6–15)"><Input type="number" min={6} max={15} value={s.pairs} onChange={(e) => setSection(i, { ...s, pairs: Math.min(15, Math.max(6, Number(e.target.value))) })} /></Field>
+              <Field label="RA cho phép (%)"><Input type="number" step="any" value={s.limit_pct} onChange={(e) => setSection(i, { ...s, limit_pct: Number(e.target.value) })} /></Field>
+              <Field label="Thay mẫu số bằng giới hạn QCVN" className="sm:col-span-2"><Select value={s.qcvn_sub ? "1" : "0"} onChange={(e) => setSection(i, { ...s, qcvn_sub: e.target.value === "1" })}><option value="0">Không (nước thải, bụi)</option><option value="1">Có, khi RM̄ &lt; 50 % giới hạn (khí SO2, NO2, CO, H2S, NH3, Hg)</option></Select></Field>
             </div>
           )}
         </div>

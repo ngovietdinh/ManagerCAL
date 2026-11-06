@@ -23,24 +23,25 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
     QRCode.toDataURL(lookupUrl(cert.number), { margin: 0, width: 220, errorCorrectionLevel: "M" }).then(setQr).catch(() => setQr(""));
   }, [cert.number]);
   const pass = cert.kind === "certificate";
+  const isRa = s.procedure?.doc_kind === "ra_report";
   const issued = dayjs(cert.issued_at);
   const sections = (s.result?.sections ?? []).filter((x) => x.kind !== "checklist");
   const stamp = cert.status === "revoked" ? "ĐÃ THU HỒI" : cert.status === "replaced" ? "BỊ THAY THẾ" : null;
 
   const info: [string, string][] = [
-    ["Tên phương tiện đo", [s.device.name, s.instrument_type.name !== s.device.name ? `(${s.instrument_type.name})` : ""].filter(Boolean).join(" ")],
+    [isRa ? "Hệ thống / kênh đo" : "Tên phương tiện đo", [s.device.name, s.instrument_type.name !== s.device.name ? `(${s.instrument_type.name})` : ""].filter(Boolean).join(" ")],
     ["Kiểu / Số sê-ri", [s.device.model, s.device.serial].filter(Boolean).join(" / ") || "–"],
     ["Nơi sản xuất", s.device.manufacturer ?? "–"],
     ["Phạm vi đo", s.device.range_text ?? "–"],
     ["Độ phân giải / cấp chính xác", [s.device.resolution_text, s.device.accuracy_class ? `cấp ${s.device.accuracy_class}` : null].filter(Boolean).join("; ") || "–"],
     ["Nơi sử dụng", [s.customer.name, s.customer.address].filter(Boolean).join(", ")],
     ["Mã của khách hàng", s.device.customer_code ?? "–"],
-    ["Hình thức kiểm định", JOB_KIND_LABEL[s.kind]],
-    ["Phương pháp kiểm định", s.procedure ? `${s.procedure.code} – ${s.procedure.name}` : "–"],
+    ...(isRa ? [] : [["Hình thức kiểm định", JOB_KIND_LABEL[s.kind]] as [string, string]]),
+    [isRa ? "Căn cứ" : "Phương pháp kiểm định", s.procedure ? `${s.procedure.code} – ${s.procedure.name}` : "–"],
     ["Chuẩn sử dụng", s.standards.map((st) => `${st.code} – ${st.name}${st.cal_cert_no ? ` (GCN HC số ${st.cal_cert_no})` : ""}`).join("; ") || "–"],
     ["Điều kiện môi trường", [s.env.temp != null ? `nhiệt độ ${fmt(s.env.temp, 1)} °C` : null, s.env.humidity != null ? `độ ẩm ${fmt(s.env.humidity, 0)} %RH` : null, s.env.pressure != null ? `áp suất ${fmt(s.env.pressure, 0)} hPa` : null].filter(Boolean).join(", ") || "–"],
-    ["Ngày kiểm định", s.performed_at ? dayjs(s.performed_at).format("DD/MM/YYYY") : "–"],
-    ["Nơi kiểm định", s.place || "–"],
+    [isRa ? "Ngày thực hiện" : "Ngày kiểm định", s.performed_at ? dayjs(s.performed_at).format("DD/MM/YYYY") : "–"],
+    [isRa ? "Nơi thực hiện" : "Nơi kiểm định", s.place || "–"],
   ];
 
   return (
@@ -63,8 +64,17 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
         </tr></tbody>
       </table>
       <div style={{ textAlign: "left", marginTop: "8pt", fontSize: "11.5pt" }}>Số: <b>{cert.number}</b>{cert.replaces_id ? " (bản thay thế)" : ""}</div>
-      <h1>{pass ? "GIẤY CHỨNG NHẬN KIỂM ĐỊNH" : "THÔNG BÁO KẾT QUẢ KIỂM ĐỊNH"}</h1>
-      <div className="sub" style={{ fontSize: "11pt" }}>{pass ? "CERTIFICATE OF VERIFICATION" : "NOTICE OF VERIFICATION RESULT"}</div>
+      {isRa ? (
+        <>
+          <h1 style={{ fontSize: "15pt" }}>BIÊN BẢN KIỂM TRA ĐỘ CHÍNH XÁC TƯƠNG ĐỐI</h1>
+          <div className="sub" style={{ fontSize: "11pt" }}>của hệ thống quan trắc tự động, liên tục – theo Thông tư số 10/2021/TT-BTNMT</div>
+        </>
+      ) : (
+        <>
+          <h1>{pass ? "GIẤY CHỨNG NHẬN KIỂM ĐỊNH" : "THÔNG BÁO KẾT QUẢ KIỂM ĐỊNH"}</h1>
+          <div className="sub" style={{ fontSize: "11pt" }}>{pass ? "CERTIFICATE OF VERIFICATION" : "NOTICE OF VERIFICATION RESULT"}</div>
+        </>
+      )}
       {!pass && <div className="center" style={{ marginTop: "4pt", fontWeight: 700, fontSize: "13pt" }}>Kết luận: KHÔNG ĐẠT</div>}
 
       <table className="doc-grid" style={{ marginTop: "8pt" }}>
@@ -74,16 +84,18 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
           ))}
           <tr>
             <td style={{ fontWeight: 700 }}>Kết luận</td>
-            <td style={{ fontWeight: 700 }}>{pass ? "ĐẠT yêu cầu kỹ thuật đo lường" : "KHÔNG ĐẠT yêu cầu kỹ thuật đo lường"}</td>
+            <td style={{ fontWeight: 700 }}>{isRa
+              ? (pass ? "ĐẠT – dữ liệu quan trắc của hệ thống được chấp nhận sử dụng" : "KHÔNG ĐẠT – RA vượt giới hạn cho phép")
+              : (pass ? "ĐẠT yêu cầu kỹ thuật đo lường" : "KHÔNG ĐẠT yêu cầu kỹ thuật đo lường")}</td>
           </tr>
-          {pass && <tr><td style={{ fontWeight: 700 }}>Số tem kiểm định</td><td>{cert.seal_no ?? "–"}</td></tr>}
-          {pass && <tr><td style={{ fontWeight: 700 }}>Có hiệu lực đến ngày</td><td style={{ fontWeight: 700 }}>{cert.valid_to ? dayjs(cert.valid_to).format("DD/MM/YYYY") : "–"}</td></tr>}
+          {pass && !isRa && <tr><td style={{ fontWeight: 700 }}>Số tem kiểm định</td><td>{cert.seal_no ?? "–"}</td></tr>}
+          {pass && <tr><td style={{ fontWeight: 700 }}>{isRa ? "Lần kiểm tra tiếp theo trước ngày" : "Có hiệu lực đến ngày"}</td><td style={{ fontWeight: 700 }}>{cert.valid_to ? dayjs(cert.valid_to).format("DD/MM/YYYY") : "–"}</td></tr>}
         </tbody>
       </table>
 
       {sections.length > 0 && (
         <>
-          <div style={{ marginTop: "8pt", fontWeight: 700, fontSize: "11.5pt" }}>Kết quả kiểm định</div>
+          <div style={{ marginTop: "8pt", fontWeight: 700, fontSize: "11.5pt" }}>{isRa ? "Kết quả kiểm tra" : "Kết quả kiểm định"}</div>
           <table className="doc-grid" style={{ marginTop: "3pt" }}>
             <thead><tr>
               <th style={{ textAlign: "left" }}>Nội dung / điểm kiểm</th><th style={{ width: "20%" }}>Sai số</th><th style={{ width: "20%" }}>Sai số cho phép</th><th style={{ width: "14%" }}>Kết quả</th>
@@ -97,10 +109,10 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
         </>
       )}
 
-      <table style={{ width: "100%", marginTop: "14pt", pageBreakInside: "avoid" }}>
+      <table style={{ width: "100%", marginTop: "10pt", pageBreakInside: "avoid", breakInside: "avoid" }}>
         <tbody><tr>
           <td style={{ width: "40%", verticalAlign: "top", fontSize: "10pt" }}>
-            {qr && <img src={qr} alt="Mã QR tra cứu" style={{ width: "28mm", height: "28mm" }} />}
+            {qr && <img src={qr} alt="Mã QR tra cứu" style={{ width: "24mm", height: "24mm" }} />}
             <div>Quét mã để tra cứu giấy chứng nhận</div>
             <div style={{ marginTop: "6pt" }}>Kiểm định viên: {s.performer?.full_name ?? "–"}{s.performer?.inspector_card_no ? ` (thẻ số ${s.performer.inspector_card_no})` : ""}</div>
             <div style={{ color: "#555", fontSize: "9pt" }}>Mã băm: {cert.hash.slice(0, 12)}</div>
@@ -108,7 +120,7 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
           <td style={{ verticalAlign: "top", textAlign: "center" }}>
             <div style={{ fontStyle: "italic" }}>{placeFromAddress(s.company.address)}, ngày {issued.format("DD")} tháng {issued.format("MM")} năm {issued.format("YYYY")}</div>
             <div style={{ fontWeight: 700, marginTop: "2pt" }}>{s.signer.title ? s.signer.title.toUpperCase() : "NGƯỜI KÝ"}</div>
-            <div style={{ height: "22mm" }} />
+            <div style={{ height: "18mm" }} />
             <div style={{ fontWeight: 700 }}>{s.signer.full_name}</div>
           </td>
         </tr></tbody>
@@ -119,15 +131,22 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
 
 function SectionRows({ sec }: { sec: EvalSection }) {
   const d = sec.decimals ?? 2;
-  const unit = sec.unit ? ` ${sec.unit}` : "";
+  // RA: chỉ in dòng tổng hợp (các cặp số liệu nằm trong biên bản hiện trường)
+  const rows = sec.kind === "ra" ? sec.rows.slice(-1) : sec.rows;
+  const cell = (v: number | null, unit: string | undefined, sign: boolean) => {
+    if (v == null) return "–";
+    const u = unit ?? sec.unit ?? "";
+    const dec = u === "%" ? 2 : u === "" && sec.kind === "linearity" ? 4 : d + 1;
+    return `${sign && v > 0 ? "+" : ""}${fmt(v, dec)}${u ? (u === "%" ? " %" : ` ${u}`) : ""}`;
+  };
   return (
     <>
       <tr><td colSpan={4} style={{ fontWeight: 700, background: "#f0f0f0" }}>{sec.title}</td></tr>
-      {sec.rows.map((r, i) => (
+      {rows.map((r, i) => (
         <tr key={i}>
           <td>{r.label}</td>
-          <td className="center">{r.error == null ? "–" : `${r.error > 0 ? "+" : ""}${fmt(r.error, d + 1)}${unit}`}</td>
-          <td className="center">{r.mpe == null ? "–" : `± ${fmt(r.mpe, d + 1)}${unit}`}</td>
+          <td className="center">{cell(r.error, r.unit, sec.kind === "points" || sec.kind === "drift")}</td>
+          <td className="center">{r.mpe == null ? "–" : `${r.cmp ?? (sec.kind === "ra" ? "≤" : "±")} ${cell(r.mpe, r.unit, false)}`}</td>
           <td className="center">{r.pass == null ? "–" : r.pass ? "Đạt" : "Không đạt"}</td>
         </tr>
       ))}

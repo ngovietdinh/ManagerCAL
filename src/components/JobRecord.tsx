@@ -35,9 +35,11 @@ export function buildReadings(template: Template, texts: RawTexts, checks: Recor
     if (s.kind === "checklist") { out[s.id] = { ...(checks[s.id] ?? {}) }; continue; }
     const r: Record<string, (number | null)[]> = {};
     const put = (pid: string, n: number) => { r[pid] = Array.from({ length: n }, (_, i) => parseNum(texts[rawKey(s.id, pid, i)])); };
-    if (s.kind === "points") for (const p of s.points) { put(p.id, s.readings); if (s.directions === 2) put(p.id + ":down", s.readings); }
-    else if (s.kind === "repeatability") put("r", s.readings);
-    else for (let i = 1; i <= s.positions; i++) put(`p${i}`, 1);
+    if (s.kind === "points") for (const p of s.points) { put(p.id, s.readings); if (s.directions === 2) put(p.id + ":down", s.readings); if (s.ref_input) put(p.id + ":ref", 1); }
+    else if (s.kind === "repeatability" || s.kind === "drift") { put("r", s.readings); if (s.ref_input) put("r:ref", 1); }
+    else if (s.kind === "eccentricity") for (let i = 1; i <= s.positions; i++) put(`p${i}`, 1);
+    else if (s.kind === "ra") { put("cem", s.pairs); put("rm", s.pairs); if (s.qcvn_sub) put("qcvn", 1); }
+    else if (s.kind === "linearity") continue;
     out[s.id] = r;
   }
   return out;
@@ -58,6 +60,19 @@ function NumCell({ value, onChange, step, disabled, label }: { value: string; on
   );
 }
 
+/** Dòng mô tả giới hạn của mục (đầu mỗi mục biên bản) */
+function limitText(s: TemplateSection): string {
+  switch (s.kind) {
+    case "checklist": return "";
+    case "points": return `Sai số cho phép: ${mpeText(s.mpe, s.unit)}${s.ref_input ? " · nhập giá trị chuẩn theo chứng nhận" : ""}`;
+    case "repeatability": return `${s.method === "stdev" ? "Độ lệch chuẩn" : "Chênh lệch"} cho phép: ${mpeText(s.limit, s.unit)}`;
+    case "eccentricity": return `Sai số cho phép: ${mpeText(s.mpe, s.unit)}`;
+    case "drift": return `Đo ${s.readings} lần, cách nhau ${s.interval}; độ trôi cho phép: ${mpeText(s.limit, s.unit)}`;
+    case "linearity": return `R² ≥ ${String(s.min_r2).replace(".", ",")}`;
+    case "ra": return `≥ 6 cặp số liệu; RA ≤ ${s.limit_pct} %`;
+  }
+}
+
 export function JobRecordEditor({ template, texts, checks, result, onText, onCheck, disabled }: {
   template: Template; texts: RawTexts; checks: Record<string, Record<string, boolean>>; result: EvalResult;
   onText: (key: string, v: string) => void; onCheck: (sec: string, item: string, v: boolean) => void; disabled?: boolean;
@@ -71,18 +86,22 @@ export function JobRecordEditor({ template, texts, checks, result, onText, onChe
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-semibold">{si + 1}. {s.title}</h4>
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                {s.kind !== "checklist" && <span>Sai số cho phép: {mpeText(s.kind === "repeatability" ? s.limit : s.mpe, s.unit)}</span>}
+                <span>{limitText(s)}</span>
                 <PassBadge pass={es?.pass ?? null} />
               </div>
             </div>
             {s.kind === "checklist" ? (
               <ChecklistEditor s={s} values={checks[s.id] ?? {}} onCheck={(item, v) => onCheck(s.id, item, v)} disabled={disabled} />
+            ) : s.kind === "linearity" ? (
+              <LinearityView row={es?.rows[0]} />
             ) : (
               <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                 <table className="table">
                   {s.kind === "points" && <PointsEditor s={s} texts={texts} rows={es?.rows ?? []} onText={onText} disabled={disabled} />}
                   {s.kind === "repeatability" && <RepeatEditor s={s} texts={texts} row={es?.rows[0]} onText={onText} disabled={disabled} />}
                   {s.kind === "eccentricity" && <EccEditor s={s} texts={texts} rows={es?.rows ?? []} onText={onText} disabled={disabled} />}
+                  {s.kind === "drift" && <DriftEditor s={s} texts={texts} rows={es?.rows ?? []} onText={onText} disabled={disabled} />}
+                  {s.kind === "ra" && <RaEditor s={s} texts={texts} rows={es?.rows ?? []} onText={onText} disabled={disabled} />}
                 </table>
               </div>
             )}
@@ -124,17 +143,19 @@ function PointsEditor({ s, texts, rows, onText, disabled }: { s: Extract<Templat
   const inputs = (pid: string, labelBase: string) => Array.from({ length: s.readings }, (_, i) => (
     <NumCell key={i} value={texts[rawKey(s.id, pid, i)] ?? ""} onChange={(v) => onText(rawKey(s.id, pid, i), v)} step={step} disabled={disabled} label={`${labelBase} lần ${i + 1}`} />
   ));
+  const errUnit = s.relative ? "%" : s.unit;
   return (
     <>
       <thead>
         <tr>
           <th>Điểm đo</th>
+          {s.ref_input && <th>Giá trị chuẩn ({s.unit})</th>}
           <th>{two ? "Số đọc (tăng)" : `Số đọc (${s.unit})`}</th>
           {two && <th>Số đọc (giảm)</th>}
           <th className="num">TB{two ? " tăng / giảm" : ""}</th>
-          <th className="num">Sai số{two ? " tăng / giảm" : ""}</th>
+          <th className="num">Sai số{two ? " tăng / giảm" : ""}{s.relative ? " (%)" : ""}</th>
           {two && <th className="num">Độ trễ</th>}
-          <th className="num">MPE (±)</th>
+          <th className="num">MPE (±{errUnit === "%" ? " %" : ""})</th>
           <th>Kết luận</th>
         </tr>
       </thead>
@@ -146,6 +167,7 @@ function PointsEditor({ s, texts, rows, onText, disabled }: { s: Extract<Templat
           return (
             <tr key={p.id}>
               <td className="whitespace-nowrap font-medium">{label}</td>
+              {s.ref_input && <td><NumCell value={texts[rawKey(s.id, p.id + ":ref", 0)] ?? ""} onChange={(v) => onText(rawKey(s.id, p.id + ":ref", 0), v)} step={step} disabled={disabled} label={`${label} giá trị chuẩn`} /></td>}
               <td><div className="flex flex-wrap gap-1">{inputs(p.id, label + (two ? " tăng" : ""))}</div></td>
               {two && <td><div className="flex flex-wrap gap-1">{inputs(p.id + ":down", label + " giảm")}</div></td>}
               <td className="num whitespace-nowrap">{fmt(up?.mean, s.decimals)}{two && ` / ${fmt(down?.mean, s.decimals)}`}</td>
@@ -153,7 +175,7 @@ function PointsEditor({ s, texts, rows, onText, disabled }: { s: Extract<Templat
                 {fmt(up?.error, s.decimals)}{two && ` / ${fmt(down?.error, s.decimals)}`}
               </td>
               {two && <td className={clsx("num", hys?.pass === false && "font-semibold text-red-700 dark:text-red-400")}>{fmt(hys?.error, s.decimals)}</td>}
-              <td className="num whitespace-nowrap">{fmt(up?.mpe, s.decimals)}</td>
+              <td className="num whitespace-nowrap">{fmt(up?.mpe, s.relative ? 1 : s.decimals)}</td>
               <td><PassBadge pass={pass} /></td>
             </tr>
           );
@@ -167,10 +189,12 @@ function RepeatEditor({ s, texts, row, onText, disabled }: { s: Extract<Template
   const step = 10 ** -s.decimals;
   return (
     <>
-      <thead><tr><th>Tải</th><th>Số đọc ({s.unit}), {s.readings} lần</th><th className="num">TB</th><th className="num">Chênh lệch lớn nhất</th><th className="num">Giới hạn</th><th>Kết luận</th></tr></thead>
+      <thead><tr><th>{s.ref_input ? `Giá trị chuẩn (${s.unit})` : "Tải"}</th><th>Số đọc ({s.unit}), {s.readings} lần</th><th className="num">TB</th><th className="num">{s.method === "stdev" ? "Độ lệch chuẩn s" : "Chênh lệch lớn nhất"}</th><th className="num">Giới hạn</th><th>Kết luận</th></tr></thead>
       <tbody>
         <tr>
-          <td className="whitespace-nowrap font-medium">{fmt(s.nominal, s.decimals)} {s.unit}</td>
+          <td className="whitespace-nowrap font-medium">{s.ref_input
+            ? <NumCell value={texts[rawKey(s.id, "r:ref", 0)] ?? ""} onChange={(v) => onText(rawKey(s.id, "r:ref", 0), v)} step={step} disabled={disabled} label="Độ lặp lại giá trị chuẩn" />
+            : <>{fmt(s.nominal, s.decimals)} {s.unit}</>}</td>
           <td><div className="flex flex-wrap gap-1">{Array.from({ length: s.readings }, (_, i) => (
             <NumCell key={i} value={texts[rawKey(s.id, "r", i)] ?? ""} onChange={(v) => onText(rawKey(s.id, "r", i), v)} step={step} disabled={disabled} label={`Độ lặp lại lần ${i + 1}`} />
           ))}</div></td>
@@ -209,9 +233,79 @@ function EccEditor({ s, texts, rows, onText, disabled }: { s: Extract<TemplateSe
   );
 }
 
+function DriftEditor({ s, texts, rows, onText, disabled }: { s: Extract<TemplateSection, { kind: "drift" }>; texts: RawTexts; rows: EvalRow[]; onText: (k: string, v: string) => void; disabled?: boolean }) {
+  const step = 10 ** -s.decimals;
+  const later = rows.filter((r) => r.label !== "Lần đo đầu");
+  return (
+    <>
+      <thead><tr><th>Lần đo</th><th>Số đọc ({s.unit})</th><th className="num">Sai lệch so với lần đầu</th><th className="num">Giới hạn (±)</th><th>Kết luận</th></tr></thead>
+      <tbody>
+        {s.ref_input && (
+          <tr><td className="font-medium">Giá trị chuẩn</td><td><NumCell value={texts[rawKey(s.id, "r:ref", 0)] ?? ""} onChange={(v) => onText(rawKey(s.id, "r:ref", 0), v)} step={step} disabled={disabled} label="Độ trôi giá trị chuẩn" /></td><td /><td /><td /></tr>
+        )}
+        {Array.from({ length: s.readings }, (_, i) => {
+          const row = i === 0 ? undefined : later[i - 1];
+          return (
+            <tr key={i}>
+              <td className="whitespace-nowrap font-medium">{i === 0 ? "Lần đầu (t = 0)" : `Sau ${i} × ${s.interval}`}</td>
+              <td><NumCell value={texts[rawKey(s.id, "r", i)] ?? ""} onChange={(v) => onText(rawKey(s.id, "r", i), v)} step={step} disabled={disabled} label={`Độ trôi lần ${i + 1}`} /></td>
+              <td className={clsx("num", row?.pass === false && "font-semibold text-red-700 dark:text-red-400")}>{i === 0 ? "–" : fmt(row?.error, s.decimals)}</td>
+              <td className="num">{i === 0 ? "–" : fmt(row?.mpe, s.decimals)}</td>
+              <td>{i === 0 ? null : <PassBadge pass={row?.pass ?? null} />}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </>
+  );
+}
+
+function LinearityView({ row }: { row?: EvalRow }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-[var(--line-2)] px-4 py-3 text-sm">
+      <span>Tính tự động từ các điểm của phép kiểm sai số (giá trị chuẩn – giá trị đo trung bình).</span>
+      <span>R² = <b className="tabular-nums">{row?.error == null ? "–" : fmt(row.error, 4)}</b></span>
+      <span>Yêu cầu ≥ <b className="tabular-nums">{fmt(row?.mpe, 4)}</b></span>
+      <PassBadge pass={row?.pass ?? null} />
+    </div>
+  );
+}
+
+function RaEditor({ s, texts, rows, onText, disabled }: { s: Extract<TemplateSection, { kind: "ra" }>; texts: RawTexts; rows: EvalRow[]; onText: (k: string, v: string) => void; disabled?: boolean }) {
+  const step = 10 ** -s.decimals;
+  const val = (k: string, i: number) => parseNum(texts[rawKey(s.id, k, i)]);
+  const summary = rows[rows.length - 1];
+  return (
+    <>
+      <thead><tr><th>Lần</th><th>Hệ thống (CEM, {s.unit})</th><th>Đối chứng (RM, {s.unit})</th><th className="num">dᵢ = CEM − RM</th></tr></thead>
+      <tbody>
+        {Array.from({ length: s.pairs }, (_, i) => {
+          const c = val("cem", i), r = val("rm", i);
+          return (
+            <tr key={i}>
+              <td className="font-medium">{i + 1}</td>
+              <td><NumCell value={texts[rawKey(s.id, "cem", i)] ?? ""} onChange={(v) => onText(rawKey(s.id, "cem", i), v)} step={step} disabled={disabled} label={`CEM lần ${i + 1}`} /></td>
+              <td><NumCell value={texts[rawKey(s.id, "rm", i)] ?? ""} onChange={(v) => onText(rawKey(s.id, "rm", i), v)} step={step} disabled={disabled} label={`RM lần ${i + 1}`} /></td>
+              <td className="num">{c != null && r != null ? fmt(c - r, s.decimals + 1) : "–"}</td>
+            </tr>
+          );
+        })}
+        {s.qcvn_sub && (
+          <tr><td colSpan={2} className="text-sm">Giới hạn QCVN áp dụng cho cơ sở ({s.unit}) – dùng làm mẫu số khi RM̄ &lt; 50 % giới hạn</td>
+            <td><NumCell value={texts[rawKey(s.id, "qcvn", 0)] ?? ""} onChange={(v) => onText(rawKey(s.id, "qcvn", 0), v)} step={step} disabled={disabled} label="Giới hạn QCVN" /></td><td /></tr>
+        )}
+        <tr>
+          <td colSpan={3} className="text-sm">{summary?.label ?? "RA"}</td>
+          <td className={clsx("num font-semibold", summary?.pass === false && "text-red-700 dark:text-red-400")}>{summary?.error == null ? "–" : `${fmt(summary.error, 1)} %`} <span className="ml-2"><PassBadge pass={summary?.pass ?? null} /></span></td>
+        </tr>
+      </tbody>
+    </>
+  );
+}
+
 /** Xem kết quả chỉ đọc (từ job.result hoặc snapshot) */
 export function JobResultView({ result, template }: { result: EvalResult; template?: Template | null }) {
-  const unitOf = useMemo(() => Object.fromEntries((template?.sections ?? []).map((s) => [s.id, s.kind === "checklist" ? "" : s.unit])), [template]);
+  const unitOf = useMemo(() => Object.fromEntries((template?.sections ?? []).map((s) => [s.id, "unit" in s ? s.unit : ""])), [template]);
   return (
     <div className="space-y-4">
       {result.sections.map((s, si) => (
@@ -224,6 +318,24 @@ export function JobResultView({ result, template }: { result: EvalResult; templa
             <table className="table">
               {s.kind === "checklist" ? (
                 <tbody>{s.rows.map((r, i) => <tr key={i}><td>{r.label}</td><td className="w-32"><PassBadge pass={r.pass} /></td></tr>)}</tbody>
+              ) : s.kind === "linearity" ? (
+                <tbody><tr>
+                  <td>{s.rows[0]?.label}</td>
+                  <td className="num whitespace-nowrap">R² = <b>{fmt(s.rows[0]?.error, 4)}</b></td>
+                  <td className="num whitespace-nowrap">≥ {fmt(s.rows[0]?.mpe, 4)}</td>
+                  <td className="w-28"><PassBadge pass={s.pass} /></td>
+                </tr></tbody>
+              ) : s.kind === "ra" ? (
+                <>
+                  <thead><tr><th>Lần</th><th className="num">Hệ thống (CEM)</th><th className="num">Đối chứng (RM)</th><th className="num">dᵢ</th></tr></thead>
+                  <tbody>
+                    {s.rows.slice(0, -1).map((r, i) => (
+                      <tr key={i}><td>{r.label}</td><td className="num">{fmt(r.readings[0], s.decimals ?? 2)}</td><td className="num">{fmt(r.readings[1], s.decimals ?? 2)}</td><td className="num">{fmt(r.error, (s.decimals ?? 2) + 1)}</td></tr>
+                    ))}
+                    <tr><td colSpan={3} className="text-sm">{s.rows.at(-1)?.label}</td>
+                      <td className="num whitespace-nowrap font-semibold">{s.rows.at(-1)?.error == null ? "–" : `${fmt(s.rows.at(-1)!.error, 1)} % ≤ ${fmt(s.rows.at(-1)!.mpe, 0)} %`} <span className="ml-1"><PassBadge pass={s.pass} /></span></td></tr>
+                  </tbody>
+                </>
               ) : (
                 <>
                   <thead><tr><th>Điểm / mục</th><th>Số đọc{unitOf[s.id] ? ` (${unitOf[s.id]})` : ""}</th><th className="num">TB</th><th className="num">Sai số</th><th className="num">MPE (±)</th><th>Kết luận</th></tr></thead>
@@ -233,8 +345,8 @@ export function JobResultView({ result, template }: { result: EvalResult; templa
                         <td className="whitespace-nowrap">{r.label}</td>
                         <td className="tabular-nums">{r.readings.length ? r.readings.map((x) => fmt(x, s.decimals ?? 2)).join("; ") : "–"}</td>
                         <td className="num">{fmt(r.mean, s.decimals ?? 2)}</td>
-                        <td className={clsx("num", r.pass === false && "font-semibold text-red-700 dark:text-red-400")}>{fmt(r.error, s.decimals ?? 2)}</td>
-                        <td className="num">{fmt(r.mpe, s.decimals ?? 2)}</td>
+                        <td className={clsx("num", r.pass === false && "font-semibold text-red-700 dark:text-red-400")}>{fmt(r.error, r.unit === "%" ? 1 : s.decimals ?? 2)}{r.unit === "%" && r.error != null ? " %" : ""}</td>
+                        <td className="num">{r.mpe == null ? "–" : `${r.cmp ?? "±"} ${fmt(r.mpe, r.unit === "%" ? 1 : s.decimals ?? 2)}${r.unit === "%" ? " %" : ""}`}</td>
                         <td><PassBadge pass={r.pass} /></td>
                       </tr>
                     ))}
