@@ -20,7 +20,6 @@ export default function Dashboard() {
   const { rows: users } = useTable("users", { where: { active: true } });
   const { rows: settingsRows } = useTable("settings");
   const customers = useIndex("customers");
-  const types = useIndex("instrument_types");
   const settings = settingsRows[0];
 
   const today = todayStr();
@@ -62,7 +61,7 @@ export default function Dashboard() {
     const review = can("review") ? jobs.filter((j) => j.status === "review" && j.assignee_id !== me.id && (!j.reviewer_id || j.reviewer_id === me.id)).map((j) => ({ j, why: "Chờ soát xét" })) : [];
     const sign = can("sign") ? jobs.filter((j) => j.status === "approval").map((j) => ({ j, why: "Chờ phê duyệt" })) : [];
     const assign = can("assign") && !hasRole(me, "technician") ? jobs.filter((j) => j.status === "received").map((j) => ({ j, why: "Chờ phân công" })) : [];
-    return [...mine, ...review, ...sign, ...assign].slice(0, 12);
+    return [...mine, ...review, ...sign, ...assign].slice(0, 8);
   }, [jobs, me, can]);
 
   const dueList = useMemo(() => [...stats.dueDevices].sort((a, b) => (a.next_due! < b.next_due! ? -1 : 1)).slice(0, 10), [stats.dueDevices]);
@@ -97,53 +96,52 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip cursor={{ fill: "#f1f5f9" }} formatter={(v, n) => [v as number, n === "dat" ? "Đạt" : "Không đạt"]} />
-                <Bar dataKey="dat" stackId="a" fill="#1e56a0" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="khongDat" stackId="a" fill="#b3261e" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="dat" name="Đạt" stackId="a" fill="#1e56a0" isAnimationActive={false} />
+                <Bar dataKey="khongDat" name="Không đạt" stackId="a" fill="#b3261e" radius={[3, 3, 0, 0]} isAnimationActive={false} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[3fr_2fr] [&>*]:min-w-0">
         <Card title="Việc của tôi" actions={<Link to="/jobs" className="link text-sm">Xem tất cả</Link>} bodyClass="p-0">
           {myJobs.length === 0 ? <Empty text="Không có việc nào đang chờ bạn." /> : (
-            <table className="table">
-              <thead><tr><th>Phiếu</th><th>Thiết bị</th><th>Khách hàng</th><th>Hẹn trả</th><th>Trạng thái</th><th>Vì sao</th></tr></thead>
+            <div className="table-wrap"><table className="table">
+              <thead><tr><th>Phiếu</th><th>Thiết bị</th><th>Khách hàng</th><th>Hẹn trả</th><th>Trạng thái</th></tr></thead>
               <tbody>
                 {myJobs.map(({ j, why }) => {
                   const d = devices.find((x) => x.id === j.device_id);
                   const late = j.due_date && j.due_date < today;
                   return (
                     <tr key={j.id} className="cursor-pointer" onClick={() => nav(`/jobs/${j.id}`)}>
-                      <td className="font-medium">{j.code}{j.priority === "urgent" && <Badge tone="red" className="ml-1">Gấp</Badge>}</td>
-                      <td>{d?.name ?? "–"}<div className="text-xs text-slate-500">{types[j.instrument_type_id]?.name}</div></td>
-                      <td className="max-w-48 truncate">{customers[j.customer_id]?.name ?? "–"}</td>
-                      <td className={late ? "font-medium text-red-700" : ""}>{fmtDate(j.due_date)}</td>
-                      <td><Badge tone={JOB_STATUS_TONE[j.status]}>{JOB_STATUS_LABEL[j.status]}</Badge></td>
-                      <td className="text-xs text-slate-500">{why}</td>
+                      <td className="code font-medium">{j.code}{j.priority === "urgent" && <Badge tone="red" className="ml-1">Gấp</Badge>}</td>
+                      <td className="min-w-40">{d?.name ?? "–"}{d?.serial && <div className="text-xs text-slate-500">{d.serial}</div>}</td>
+                      <td className="max-w-40 truncate">{customers[j.customer_id]?.name ?? "–"}</td>
+                      <td className={late ? "code font-medium text-red-700 dark:text-red-300" : "code"}>{fmtDate(j.due_date)}</td>
+                      <td><Badge tone={JOB_STATUS_TONE[j.status]}>{JOB_STATUS_LABEL[j.status]}</Badge><div className="mt-0.5 text-xs text-slate-500">{why}</div></td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Card>
         <Card title="Thiết bị đến hạn sắp tới" actions={<Link to="/devices?due=1" className="link text-sm">Xem tất cả</Link>} bodyClass="p-0">
           {dueList.length === 0 ? <Empty text="Không có thiết bị nào đến hạn trong 30 ngày tới." /> : (
-            <table className="table">
+            <div className="table-wrap"><table className="table">
               <thead><tr><th>Khách hàng</th><th>Thiết bị</th><th>Hạn</th><th></th></tr></thead>
               <tbody>
                 {dueList.map((d) => (
                   <tr key={d.id}>
                     <td className="max-w-52 truncate"><Link className="link" to={`/customers/${d.customer_id}`}>{customers[d.customer_id]?.name ?? "–"}</Link></td>
                     <td>{d.name}<div className="text-xs text-slate-500">{d.serial ?? ""}</div></td>
-                    <td><div>{fmtDate(d.next_due)}</div><Badge tone={dueTone(d.next_due)}>{dueText(d.next_due)}</Badge></td>
-                    <td className="text-right">{can("orders") && <Button size="sm" variant="secondary" className="min-h-7" onClick={() => nav(`/orders/new?customer=${d.customer_id}&device=${d.id}`)}>Tạo đơn</Button>}</td>
+                    <td className="code"><div>{fmtDate(d.next_due)}</div><Badge tone={dueTone(d.next_due)}>{dueText(d.next_due)}</Badge></td>
+                    <td className="text-right">{can("orders") && <Button size="sm" variant="secondary" className="min-h-7 whitespace-nowrap" onClick={() => nav(`/orders/new?customer=${d.customer_id}&device=${d.id}`)}>Tạo đơn</Button>}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Card>
       </div>

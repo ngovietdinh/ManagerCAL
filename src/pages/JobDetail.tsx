@@ -78,8 +78,8 @@ export default function JobDetail() {
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"><span className="font-semibold">Không thực hiện:</span> {job.cancel_reason}</div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4 min-w-0">
           <Card title="Thiết bị và khách hàng" bodyClass="px-4 py-2">
             <Info label="Thiết bị"><span className="font-medium">{device?.name ?? "–"}</span> {device?.manufacturer && <span className="text-slate-500">· {device.manufacturer} {device.model}</span>}</Info>
             <Info label="Số sê-ri">{device?.serial ?? "–"}{device?.customer_code && <span className="text-slate-500"> · mã khách {device.customer_code}</span>}</Info>

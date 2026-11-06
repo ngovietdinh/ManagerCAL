@@ -171,7 +171,7 @@ export default function OrderNew() {
       <Modal open={pickOpen} onClose={() => setPickOpen(false)} title="Chọn thiết bị đã có của khách" size="lg"
         footer={<><Button variant="secondary" onClick={() => setPickOpen(false)}>Đóng</Button><Button disabled={!pickSel.size} onClick={addPicked}>Thêm {pickSel.size} thiết bị</Button></>}>
         {customerDevices.length === 0 ? <p className="text-sm text-slate-500">Khách chưa có thiết bị nào trong hồ sơ. Dùng "Thiết bị mới".</p> : (
-          <table className="table">
+          <div className="table-wrap"><table className="table">
             <thead><tr><th className="w-8"></th><th>Thiết bị</th><th>Sê-ri</th><th>Loại PTĐ</th><th>Hạn kế tiếp</th></tr></thead>
             <tbody>
               {customerDevices.map((d) => {
@@ -186,7 +186,7 @@ export default function OrderNew() {
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </Modal>
       <Modal open={!!newDev} onClose={() => setNewDev(null)} title="Thiết bị mới của khách" size="lg"

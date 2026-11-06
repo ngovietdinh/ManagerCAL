@@ -28,7 +28,7 @@ const DONE = ["issued", "returned"];
 /** Bảng + nút xuất Excel dùng chung cho mọi báo cáo */
 function ReportTable<R extends Record<string, unknown>>({ title, file, columns, rows, footer }: {
   title: string; file: string; rows: R[]; footer?: ReactNode;
-  columns: { key: keyof R & string; header: string; num?: boolean; render?: (r: R) => ReactNode; xlsx?: (r: R) => unknown; width?: number }[];
+  columns: { key: keyof R & string; header: string; num?: boolean; nowrap?: boolean; render?: (r: R) => ReactNode; xlsx?: (r: R) => unknown; width?: number }[];
 }) {
   const doExport = () => {
     const sheet: SheetSpec = {
@@ -45,7 +45,7 @@ function ReportTable<R extends Record<string, unknown>>({ title, file, columns, 
           <table className="table">
             <thead><tr>{columns.map((c) => <th key={c.key} className={c.num ? "num" : undefined}>{c.header}</th>)}</tr></thead>
             <tbody>{rows.map((r, i) => (
-              <tr key={i}>{columns.map((c) => <td key={c.key} className={c.num ? "num" : undefined}>{c.render ? c.render(r) : (r[c.key] as ReactNode) ?? "–"}</td>)}</tr>
+              <tr key={i}>{columns.map((c) => <td key={c.key} className={c.num ? "num nowrap" : c.nowrap ? "nowrap" : undefined}>{c.render ? c.render(r) : (r[c.key] as ReactNode) ?? "–"}</td>)}</tr>
             ))}</tbody>
           </table>
         </div>
@@ -122,13 +122,13 @@ export default function Reports() {
       {tab === "certs" && (
         <ReportTable title="Sổ cấp giấy chứng nhận kiểm định" file={`so-cap-gcn_${from}_${to}`} rows={certs as (Certificate & Record<string, unknown>)[]}
           columns={[
-            { key: "number", header: "Số GCN", render: (c) => <Link className="link" to={`/certificates/${c.id}`}>{c.number}</Link> },
-            { key: "issued_at", header: "Ngày cấp", render: (c) => fmtDate(c.issued_at), xlsx: (c) => fmtDate(c.issued_at) },
+            { key: "number", header: "Số GCN", nowrap: true, render: (c) => <Link className="link" to={`/certificates/${c.id}`}>{c.number}</Link> },
+            { key: "issued_at", header: "Ngày cấp", nowrap: true, render: (c) => fmtDate(c.issued_at), xlsx: (c) => fmtDate(c.issued_at) },
             { key: "customer_id", header: "Khách hàng", render: (c) => c.snapshot.customer.name, xlsx: (c) => c.snapshot.customer.name, width: 32 },
             { key: "device_id", header: "Phương tiện đo", render: (c) => c.snapshot.device.name, xlsx: (c) => c.snapshot.device.name, width: 24 },
-            { key: "snapshot", header: "Số sê-ri", render: (c) => c.snapshot.device.serial ?? "–", xlsx: (c) => c.snapshot.device.serial },
+            { key: "snapshot", header: "Số sê-ri", nowrap: true, render: (c) => c.snapshot.device.serial ?? "–", xlsx: (c) => c.snapshot.device.serial },
             { key: "kind", header: "Kết luận", render: (c) => <Badge tone={c.kind === "certificate" ? "green" : "red"}>{c.kind === "certificate" ? "Đạt" : "Không đạt"}</Badge>, xlsx: (c) => (c.kind === "certificate" ? "Đạt" : "Không đạt") },
-            { key: "valid_to", header: "Hiệu lực đến", render: (c) => fmtDate(c.valid_to), xlsx: (c) => fmtDate(c.valid_to) },
+            { key: "valid_to", header: "Hiệu lực đến", nowrap: true, render: (c) => fmtDate(c.valid_to), xlsx: (c) => fmtDate(c.valid_to) },
             { key: "seal_no", header: "Số tem", render: (c) => (c.seal_no ? <span className="seal-no">{c.seal_no}</span> : "–") },
             { key: "signer_id", header: "Người ký", render: (c) => c.snapshot.signer.full_name, xlsx: (c) => c.snapshot.signer.full_name },
             { key: "status", header: "Trạng thái", render: (c) => <Badge tone={CERT_STATUS_TONE[c.status]}>{CERT_STATUS_LABEL[c.status]}</Badge>, xlsx: (c) => CERT_STATUS_LABEL[c.status] },
@@ -148,7 +148,7 @@ export default function Reports() {
             <ReportTable title="Sổ sử dụng tem kiểm định" file={`so-tem_${from}_${to}`} rows={used as never[]}
               columns={[
                 { key: "number", header: "Số tem", render: (s) => <span className="seal-no">{(s as { number: string }).number}</span>, xlsx: (s) => (s as { number: string }).number },
-                { key: "used_at", header: "Ngày dùng", render: (s) => fmtDate((s as { used_at: string }).used_at), xlsx: (s) => fmtDate((s as { used_at: string }).used_at) },
+                { key: "used_at", header: "Ngày dùng", nowrap: true, render: (s) => fmtDate((s as { used_at: string }).used_at), xlsx: (s) => fmtDate((s as { used_at: string }).used_at) },
                 { key: "certificate_id", header: "GCN", render: (s) => certsIdx[(s as { certificate_id: string }).certificate_id]?.number ?? "–", xlsx: (s) => certsIdx[(s as { certificate_id: string }).certificate_id]?.number },
                 { key: "assigned_to", header: "Người giữ", render: (s) => userName((s as { assigned_to: string | null }).assigned_to), xlsx: (s) => userName((s as { assigned_to: string | null }).assigned_to) },
               ]}
@@ -295,10 +295,10 @@ export default function Reports() {
           <div className="grid gap-4">
             <ReportTable title={`Phiếu trễ hạn trả (tính đến ${fmtDate(today)})`} file={`tre-han_${today}`} rows={late}
               columns={[
-                { key: "code", header: "Phiếu", render: (j) => <Link className="link" to={`/jobs/${j.id}`}>{j.code}</Link>, xlsx: (j) => j.code },
+                { key: "code", header: "Phiếu", nowrap: true, render: (j) => <Link className="link" to={`/jobs/${j.id}`}>{j.code}</Link>, xlsx: (j) => j.code },
                 { key: "customer_id", header: "Khách hàng", render: (j) => custName(j.customer_id), xlsx: (j) => custName(j.customer_id), width: 30 },
                 { key: "instrument_type_id", header: "Loại PTĐ", render: (j) => typeName(j.instrument_type_id), xlsx: (j) => typeName(j.instrument_type_id) },
-                { key: "due_date", header: "Hẹn trả", render: (j) => fmtDate(j.due_date), xlsx: (j) => fmtDate(j.due_date) },
+                { key: "due_date", header: "Hẹn trả", nowrap: true, render: (j) => fmtDate(j.due_date), xlsx: (j) => fmtDate(j.due_date) },
                 { key: "late", header: "Trễ (ngày)", num: true, render: (j) => <span className="font-semibold text-red-700 dark:text-red-300">{j.late}</span> },
                 { key: "assignee_id", header: "KĐV", render: (j) => userName(j.assignee_id), xlsx: (j) => userName(j.assignee_id) },
                 { key: "status", header: "Trạng thái", render: (j) => <Badge tone={JOB_STATUS_TONE[j.status]}>{JOB_STATUS_LABEL[j.status]}</Badge>, xlsx: (j) => JOB_STATUS_LABEL[j.status] },
@@ -326,9 +326,9 @@ export default function Reports() {
         return (
           <ReportTable title={`Công nợ chưa thu (tính đến ${fmtDate(today)})`} file={`cong-no_${today}`} rows={unpaid}
             columns={[
-              { key: "code", header: "Đơn hàng", render: (o) => <Link className="link" to={`/orders/${o.id}`}>{o.code}</Link>, xlsx: (o) => o.code },
+              { key: "code", header: "Đơn hàng", nowrap: true, render: (o) => <Link className="link" to={`/orders/${o.id}`}>{o.code}</Link>, xlsx: (o) => o.code },
               { key: "customer_id", header: "Khách hàng", render: (o) => custName(o.customer_id), xlsx: (o) => custName(o.customer_id), width: 34 },
-              { key: "received_at", header: "Ngày nhận", render: (o) => fmtDate(o.received_at), xlsx: (o) => fmtDate(o.received_at) },
+              { key: "received_at", header: "Ngày nhận", nowrap: true, render: (o) => fmtDate(o.received_at), xlsx: (o) => fmtDate(o.received_at) },
               { key: "status", header: "Đơn", render: (o) => (o.status === "done" ? "Hoàn thành" : "Đang xử lý"), xlsx: (o) => (o.status === "done" ? "Hoàn thành" : "Đang xử lý") },
               { key: "total_amount", header: "Số tiền", num: true, render: (o) => vnd(o.total_amount) },
               { key: "age", header: "Số ngày", num: true, render: (o) => <Badge tone={o.age > 30 ? "red" : o.age > 15 ? "amber" : "gray"}>{o.age}</Badge>, xlsx: (o) => o.age },
@@ -387,8 +387,8 @@ function DueReport({ devices, custName, typeName, types, userName, customers }: 
           { key: "customer_id", header: "Khách hàng", render: (d) => <Link className="link" to={`/customers/${d.customer_id}`}>{custName(d.customer_id)}</Link>, xlsx: (d) => custName(d.customer_id), width: 34 },
           { key: "name", header: "Thiết bị", width: 24 },
           { key: "instrument_type_id", header: "Loại PTĐ", render: (d) => typeName(d.instrument_type_id), xlsx: (d) => typeName(d.instrument_type_id) },
-          { key: "serial", header: "Số sê-ri" },
-          { key: "next_due", header: "Hạn", render: (d) => <Badge tone={d.overdue ? "red" : "amber"}>{fmtDate(d.next_due)}</Badge>, xlsx: (d) => fmtDate(d.next_due) },
+          { key: "serial", header: "Số sê-ri", nowrap: true },
+          { key: "next_due", header: "Hạn", nowrap: true, render: (d) => <Badge tone={d.overdue ? "red" : "amber"}>{fmtDate(d.next_due)}</Badge>, xlsx: (d) => fmtDate(d.next_due) },
           { key: "id", header: "NV kinh doanh", render: (d) => userName(customers[d.customer_id]?.sales_user_id ?? null), xlsx: (d) => userName(customers[d.customer_id]?.sales_user_id ?? null) },
           { key: "price", header: "Đơn giá tham khảo", num: true, render: (d) => vnd(d.price) },
         ]}

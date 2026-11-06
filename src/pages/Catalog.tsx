@@ -14,7 +14,7 @@ export default function Catalog() {
   return (
     <>
       <PageHeader title="Danh mục, quy trình" subtitle="Lĩnh vực đo, loại phương tiện đo, quy trình kiểm định kèm mẫu biên bản, chi nhánh" />
-      <Tabs value={tab} onChange={setTab} className="mb-4 w-fit" items={[
+      <Tabs value={tab} onChange={setTab} className="mb-4 w-fit max-w-full" items={[
         { value: "fields", label: "Lĩnh vực đo" }, { value: "types", label: "Loại phương tiện đo" }, { value: "procedures", label: "Quy trình kiểm định" }, { value: "branches", label: "Chi nhánh" },
       ]} />
       {tab === "fields" && <FieldsTab />}

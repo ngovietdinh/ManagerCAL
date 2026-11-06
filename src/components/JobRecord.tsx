@@ -54,7 +54,7 @@ function NumCell({ value, onChange, step, disabled, label }: { value: string; on
   return (
     <input type="text" inputMode="decimal" aria-label={label} value={value} disabled={disabled} step={step}
       onChange={(e) => onChange(e.target.value)}
-      className="input input-sm num w-24 min-w-20" />
+      className="input input-sm num w-20 min-w-16" />
   );
 }
 

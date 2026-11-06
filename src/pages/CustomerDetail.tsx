@@ -82,7 +82,7 @@ export default function CustomerDetail() {
           {info.map(([k, v]) => <div key={k}><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium">{v || "–"}</dd></div>)}
         </dl>
       </Card>
-      <Tabs className="mb-3 w-fit" value={tab} onChange={setTab} items={[
+      <Tabs className="mb-3 w-fit max-w-full" value={tab} onChange={setTab} items={[
         { value: "devices", label: "Thiết bị", count: devices.length }, { value: "orders", label: "Đơn hàng", count: orders.length }, { value: "certs", label: "Giấy chứng nhận", count: certs.length },
       ]} />
 
@@ -115,7 +115,7 @@ export default function CustomerDetail() {
       {tab === "orders" && (
         <Card bodyClass="p-0" title="Đơn hàng">
           {orders.length === 0 ? <Empty text="Chưa có đơn hàng nào." /> : (
-            <table className="table">
+            <div className="table-wrap"><table className="table">
               <thead><tr><th>Mã đơn</th><th>Ngày nhận</th><th>Hẹn trả</th><th className="num">Số phiếu</th><th className="num">Tổng tiền</th><th>Đã thu</th><th>Trạng thái</th></tr></thead>
               <tbody>
                 {orders.map((o) => (
@@ -129,7 +129,7 @@ export default function CustomerDetail() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Card>
       )}
@@ -137,7 +137,7 @@ export default function CustomerDetail() {
       {tab === "certs" && (
         <Card bodyClass="p-0" title="Giấy chứng nhận">
           {certs.length === 0 ? <Empty text="Chưa có giấy chứng nhận nào." /> : (
-            <table className="table">
+            <div className="table-wrap"><table className="table">
               <thead><tr><th>Số</th><th>Loại</th><th>Thiết bị</th><th>Ngày cấp</th><th>Hiệu lực đến</th><th>Trạng thái</th></tr></thead>
               <tbody>
                 {certs.map((x) => (
@@ -150,7 +150,7 @@ export default function CustomerDetail() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </Card>
       )}

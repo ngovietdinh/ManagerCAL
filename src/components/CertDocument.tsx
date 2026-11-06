@@ -67,7 +67,7 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
       <div className="sub" style={{ fontSize: "11pt" }}>{pass ? "CERTIFICATE OF VERIFICATION" : "NOTICE OF VERIFICATION RESULT"}</div>
       {!pass && <div className="center" style={{ marginTop: "4pt", fontWeight: 700, fontSize: "13pt" }}>Kết luận: KHÔNG ĐẠT</div>}
 
-      <table className="grid" style={{ marginTop: "8pt" }}>
+      <table className="doc-grid" style={{ marginTop: "8pt" }}>
         <tbody>
           {info.map(([k, v]) => (
             <tr key={k}><td style={{ width: "36%", fontWeight: 700 }}>{k}</td><td>{v}</td></tr>
@@ -84,7 +84,7 @@ export default function CertDocument({ cert }: { cert: Certificate }) {
       {sections.length > 0 && (
         <>
           <div style={{ marginTop: "8pt", fontWeight: 700, fontSize: "11.5pt" }}>Kết quả kiểm định</div>
-          <table className="grid" style={{ marginTop: "3pt" }}>
+          <table className="doc-grid" style={{ marginTop: "3pt" }}>
             <thead><tr>
               <th style={{ textAlign: "left" }}>Nội dung / điểm kiểm</th><th style={{ width: "20%" }}>Sai số</th><th style={{ width: "20%" }}>Sai số cho phép</th><th style={{ width: "14%" }}>Kết quả</th>
             </tr></thead>

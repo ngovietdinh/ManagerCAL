@@ -51,7 +51,7 @@ export default function OrderDetail() {
           <h1>Phiếu tiếp nhận phương tiện đo</h1>
           <p className="sub">Ngày {dayjs(o.received_at).format("DD")} tháng {dayjs(o.received_at).format("MM")} năm {dayjs(o.received_at).format("YYYY")}</p>
           <p className="mt-3">Khách hàng: <b>{c?.name}</b><br />Địa chỉ: {c?.address ?? "…"}{c?.tax_code ? ` · MST: ${c.tax_code}` : ""}<br />Người giao: {o.contact_name ?? "…"}{o.contact_phone ? ` · ĐT: ${o.contact_phone}` : ""}<br />Nơi thực hiện: {o.onsite ? "Tại hiện trường của khách hàng" : `Tại phòng thí nghiệm (${branches[o.branch_id ?? ""]?.name ?? ""})`}</p>
-          <table className="grid mt-3">
+          <table className="doc-grid mt-3">
             <thead><tr><th style={{ width: "6%" }}>TT</th><th>Tên phương tiện đo</th><th>Kiểu / số sê-ri</th><th>Tình trạng khi nhận</th><th>Phụ kiện</th><th>Loại kiểm định</th></tr></thead>
             <tbody>
               {jobs.map((j, i) => {

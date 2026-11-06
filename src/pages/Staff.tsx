@@ -21,7 +21,7 @@ export default function Staff() {
   return (
     <>
       <PageHeader title="Nhân sự, ủy quyền" subtitle="Hồ sơ kiểm định viên, thẻ kiểm định viên và ma trận ủy quyền theo lĩnh vực đo" />
-      <Tabs value={tab} onChange={setTab} className="mb-4 w-fit" items={[{ value: "users", label: "Nhân sự" }, { value: "matrix", label: "Ma trận ủy quyền" }]} />
+      <Tabs value={tab} onChange={setTab} className="mb-4 w-fit max-w-full" items={[{ value: "users", label: "Nhân sự" }, { value: "matrix", label: "Ma trận ủy quyền" }]} />
       {tab === "users" ? <UsersTab /> : <MatrixTab />}
     </>
   );
@@ -184,7 +184,7 @@ function MatrixTab() {
         {cell && (
           <>
             {cellAuths.length === 0 ? <p className="mb-3 text-sm text-slate-500">Chưa có ủy quyền nào trong lĩnh vực này.</p> : (
-              <table className="table mb-4">
+              <div className="table-wrap"><table className="table mb-4">
                 <thead><tr><th>Vai trò</th><th>Số quyết định</th><th>Từ ngày</th><th>Đến ngày</th><th></th></tr></thead>
                 <tbody>
                   {cellAuths.map((a) => (
@@ -197,7 +197,7 @@ function MatrixTab() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
             <Card title="Thêm ủy quyền">
               <div className="grid gap-3 sm:grid-cols-4">

@@ -23,7 +23,7 @@ function Diff({ before, after }: { before: unknown; after: unknown }) {
   const changed = new Set(keys.filter((k) => JSON.stringify(b[k]) !== JSON.stringify(a[k])));
   const fmt = (v: unknown) => (v === undefined ? "–" : typeof v === "object" ? JSON.stringify(v, null, 1) : String(v));
   return (
-    <table className="table">
+    <div className="table-wrap"><table className="table">
       <thead><tr><th>Trường</th><th>Trước</th><th>Sau</th></tr></thead>
       <tbody>
         {keys.map((k) => (
@@ -34,7 +34,7 @@ function Diff({ before, after }: { before: unknown; after: unknown }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 
