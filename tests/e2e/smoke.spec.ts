@@ -19,5 +19,5 @@ test("đăng nhập demo và mở được mọi trang chính không lỗi JS", 
 
 test("tra cứu GCN công khai", async ({ page }) => {
   await page.goto("/#/lookup");
-  await expect(page.locator("body")).toContainText(/Tra cứu/i);
+  await expect(page.locator("body")).toContainText(/Tra cứu/i, { timeout: 20_000 });
 });

@@ -26,6 +26,18 @@ interface DataCtx {
 const Ctx = createContext<DataCtx | null>(null);
 const LS_USER = "managercal.user";
 
+// Nạp kho và (nếu trống) dữ liệu demo đúng một lần cho mỗi kho,
+// kể cả khi React chạy hiệu ứng hai lần (StrictMode).
+const inits = new WeakMap<LocalRepo, Promise<void>>();
+function initOnce(repo: LocalRepo): Promise<void> {
+  let p = inits.get(repo);
+  if (!p) {
+    p = repo.load().then((had) => (had ? undefined : seedDemo(repo))).then(() => repo.flush());
+    inits.set(repo, p);
+  }
+  return p;
+}
+
 export function DataProvider({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [me, setMe] = useState<User | null>(null);
@@ -46,9 +58,7 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const local = repo as LocalRepo;
-      const had = await local.load();
-      if (!had) await seedDemo(repo);
+      await initOnce(repo as LocalRepo);
       const list = await loadUsers();
       const savedId = localStorage.getItem(LS_USER);
       const u = list.find((x) => x.id === savedId && x.active) ?? null;
