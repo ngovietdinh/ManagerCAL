@@ -1,58 +1,264 @@
 @import "tailwindcss";
 
+/* Chế độ tối: lớp .dark trên <html> (đặt theo cài đặt người dùng hoặc theo hệ điều hành) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * ManagerCAL – ngôn ngữ thiết kế "kính trên cát" (cùng họ với CV và Trợ lý văn bản của chủ dự án,
+ * rút từ các repo đã gắn sao: apple-design-skill, hallmark, taste-skill, emilkowalski/skills, design.md).
+ *  - Nền: đốm màu làm mờ + voan (chủ đề "Cát" khi sáng, "Đêm" khi tối).
+ *  - Lớp điều khiển (thanh trên, thanh bên, dock) là KÍNH; lớp nội dung (thẻ, bảng, form) là vật liệu ĐỤC để dễ đọc.
+ *  - Một màu một nghĩa: ngọc = đạt / xong / mục đang chọn, đỏ = quá hạn / không đạt, hổ phách = chờ, đen = hành động chính.
+ * Chi tiết và luật dùng: DESIGN.md.
+ */
 @theme {
-  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-doc: "Tinos", "Times New Roman", Times, serif;
-  /* xanh kiểm định – màu nhấn duy nhất (xem DESIGN.md) */
-  --color-brand-50: #e6eef9;
-  --color-brand-100: #cfdcf2;
-  --color-brand-200: #a9c1e6;
-  --color-brand-300: #7ea2d6;
-  --color-brand-400: #5282c0;
-  --color-brand-500: #2f6ab0;
-  --color-brand-600: #1e56a0;
-  --color-brand-700: #174685;
-  --color-brand-800: #123768;
-  --color-brand-900: #0d274a;
-  /* vàng đồng – chỉ cho tem và con số nổi bật */
-  --color-seal-100: #fbf3dc;
+
+  /* trung tính tông ấm (thay slate mặc định) – đã đo tương phản trên nền thẻ #fffcf7: 400 = 4.9:1, 500 = 6.4:1 */
+  --color-slate-50: #faf6f0;
+  --color-slate-100: #f3ede4;
+  --color-slate-200: #e7dfd3;
+  --color-slate-300: #d3c8b9;
+  --color-slate-400: #786d61;
+  --color-slate-500: #665c51;
+  --color-slate-600: #52493f;
+  --color-slate-700: #3d3630;
+  --color-slate-800: #2c2f36;
+  --color-slate-900: #22252c;
+  --color-slate-950: #16181d;
+
+  /* ngọc – màu nhấn: đạt, xong, mục đang chọn, liên kết. 700 trên nền thẻ = 5.5:1; chữ trắng trên 600 = 4.9:1 */
+  --color-brand-50: #e4f5ee;
+  --color-brand-100: #c8ecdd;
+  --color-brand-200: #97dbbf;
+  --color-brand-300: #5fc79f;
+  --color-brand-400: #34c79a;
+  --color-brand-500: #19a37e;
+  --color-brand-600: #11805f;
+  --color-brand-700: #0e7558;
+  --color-brand-800: #0b5c45;
+  --color-brand-900: #084334;
+
+  /* vàng đồng – chỉ cho số tem */
+  --color-seal-100: #fbefd2;
   --color-seal-600: #b8860b;
   --color-seal-800: #7a5706;
+
+  --radius-card: 18px;
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-:root { color-scheme: light; -webkit-tap-highlight-color: transparent; }
-:root.dark { color-scheme: dark; }
+/* ---------------------------------------------------------------- token kính (giá trị theo CV / SCADA Glass) */
+:root {
+  --ink-rgb: 24, 24, 26;
+  --hi: 255, 255, 255;
+  --gk: 1;
+  --sh: 70, 45, 20;
+  --chip: #fff;
+  --chip-ink: #18181a;
+  --accent: #1b1b1d;
+  --accent-ink: #fff;
+  --bank-a: #2a2a2d;
+  --bank-b: #101012;
+  --c1: #19a37e;
+  --c1-hi: #34c79a;
+  --c1-lo: #0f7a5d;
+  --c2: #c8352b;
+  --c3: #e09a1a;
+  --b0: #b49c82;
+  --b1: #efe4d5;
+  --b2: #8a6a4c;
+  --b3: #5a4537;
+  --b4: #d6c4ae;
+  --b5: #a78a6c;
+  --veil-a: rgba(236, 224, 208, 0.36);
+  --veil-b: rgba(214, 196, 174, 0.18);
+  --veil-c: rgba(92, 70, 52, 0.28);
+  --veil-d: rgba(255, 246, 232, 0.25);
+  --ink: rgb(var(--ink-rgb));
+  --ink-2: rgba(var(--ink-rgb), 0.8);
+  --ink-3: rgba(var(--ink-rgb), 0.7);   /* HIG: 0.52 của CV chỉ đạt ~3:1 → nâng lên 0.7 */
+  --edge: rgba(var(--hi), calc(0.5 * var(--gk)));
+  /* vật liệu đục cho lớp nội dung */
+  --card: rgba(255, 252, 247, 0.92);
+  --card-solid: #fffcf7;
+  --card-2: #f7f1e8;
+  --line: rgba(var(--ink-rgb), 0.1);
+  --line-2: rgba(var(--ink-rgb), 0.16);
+  color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
+}
+:root.dark {
+  --ink-rgb: 238, 240, 245;
+  --gk: 0.34;
+  --sh: 0, 0, 0;
+  --chip: #f2f3f5;
+  --chip-ink: #111215;
+  --accent: #f2f3f5;
+  --accent-ink: #111215;
+  --bank-a: #2d3039;
+  --bank-b: #16181d;
+  --c1: #3ddc97;
+  --c1-hi: #2fbf83;
+  --c1-lo: #12875a;
+  --c2: #ff7a5c;
+  --c3: #ffd166;
+  --b0: #0c0d11;
+  --b1: #262a33;
+  --b2: #121419;
+  --b3: #050507;
+  --b4: #1c2029;
+  --b5: #2b2519;
+  --veil-a: rgba(0, 0, 0, 0.2);
+  --veil-b: rgba(0, 0, 0, 0.1);
+  --veil-c: rgba(0, 0, 0, 0.45);
+  --veil-d: rgba(80, 90, 110, 0.12);
+  --card: rgba(34, 37, 44, 0.94);
+  --card-solid: #22252c;
+  --card-2: #2c2f36;
+  --line: rgba(var(--ink-rgb), 0.1);
+  --line-2: rgba(var(--ink-rgb), 0.18);
+  color-scheme: dark;
+}
+
 html, body, #root { min-height: 100%; }
-body { @apply bg-[#f4f6fa] text-[#15213a] antialiased dark:bg-[#0b1220] dark:text-[#e8edf5]; font-size: 14px; }
+body {
+  background: var(--b0);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible { outline: 2px solid var(--c1); outline-offset: 2px; border-radius: 8px; }
+::selection { background: var(--c1); color: #fff; }
+
+/* ---------------------------------------------------------------- nền đốm màu (vẽ một lần, cố định) */
+.app-bg {
+  position: fixed; inset: -70px; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38% 46% at 22% 18%, var(--b1) 0%, transparent 70%),
+    radial-gradient(30% 40% at 78% 14%, var(--b2) 0%, transparent 72%),
+    radial-gradient(46% 38% at 60% 62%, var(--b3) 0%, transparent 70%),
+    radial-gradient(42% 40% at 12% 82%, var(--b4) 0%, transparent 70%),
+    radial-gradient(50% 40% at 90% 92%, var(--b5) 0%, transparent 70%),
+    var(--b0);
+  filter: blur(20px);
+}
+.app-bg::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, var(--veil-a) 0%, var(--veil-b) 45%, var(--veil-c) 100%),
+    radial-gradient(70% 55% at 50% 40%, var(--veil-d), transparent 70%);
+}
 
 @layer components {
-  .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900; }
-  .input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition
-      placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
-      disabled:bg-slate-100 disabled:text-slate-500
-      dark:border-slate-700 dark:bg-slate-900 dark:disabled:bg-slate-800;
+  /* kính – chỉ cho lớp điều khiển (thanh trên, thanh bên, dock, menu nổi) */
+  .glass {
+    background: rgba(var(--hi), calc(0.16 * var(--gk)));
+    border: 1px solid rgba(var(--hi), calc(0.38 * var(--gk)));
+    backdrop-filter: blur(26px) saturate(1.3);
+    -webkit-backdrop-filter: blur(26px) saturate(1.3);
+    box-shadow: 0 10px 30px rgba(var(--sh), 0.1);
   }
-  .input-sm { @apply rounded-lg px-2 py-1 text-sm; }
-  .label { @apply mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400; }
+  .round {
+    @apply relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold;
+    color: var(--ink);
+    border: 1px solid rgba(var(--hi), calc(0.45 * var(--gk)));
+    background: rgba(var(--hi), calc(0.2 * var(--gk)));
+    transition: transform 0.2s var(--ease-out-soft), background-color 0.2s;
+  }
+  .round:hover { background: rgba(var(--hi), calc(0.42 * var(--gk))); }
+  .round--white { background: var(--chip); color: var(--chip-ink); }
+
+  /* thẻ nội dung – vật liệu đục, viền sáng mép trên */
+  .card {
+    border-radius: var(--radius-card);
+    background: var(--card);
+    border: 1px solid var(--edge);
+    box-shadow: inset 0 1px 0 rgba(var(--hi), calc(0.6 * var(--gk))), 0 10px 28px rgba(var(--sh), 0.08);
+  }
+  /* thẻ kính của màn hình nhìn (Tổng quan) */
+  .gc {
+    position: relative; min-width: 0; border-radius: var(--radius-card); padding: 18px 20px;
+    background: linear-gradient(160deg, rgba(var(--hi), calc(0.5 * var(--gk))), rgba(var(--hi), calc(0.3 * var(--gk))));
+    border: 1px solid var(--edge);
+    backdrop-filter: blur(18px) saturate(1.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+    box-shadow: inset 0 1px 0 rgba(var(--hi), calc(0.6 * var(--gk))), 0 10px 28px rgba(var(--sh), 0.1);
+    color: var(--ink);
+    text-align: left;
+  }
+  .gc--emerald { background: linear-gradient(150deg, #1fa882 0%, #0d7356 100%); border-color: rgba(190, 255, 230, 0.6); color: #fff; }
+  .gc--bank { background: linear-gradient(150deg, var(--bank-a), var(--bank-b)); border-color: rgba(255, 255, 255, 0.12); color: #f4f4f5; }
+  .gc--alert { background: linear-gradient(150deg, #d2463a 0%, #9a2219 100%); border-color: rgba(255, 210, 200, 0.55); color: #fff; }
+  a.gc, button.gc { transition: transform 0.35s var(--ease-out-soft), box-shadow 0.35s; }
+  @media (hover: hover) and (pointer: fine) {
+    a.gc:hover, button.gc:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(var(--hi), calc(0.7 * var(--gk))), 0 18px 40px rgba(var(--sh), 0.16); }
+  }
+  .gx-big { font-size: clamp(28px, 2.6vw, 38px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gx-big small { margin-left: 4px; font-size: 14px; font-weight: 600; opacity: 0.75; }
+  .gx-note { font-size: 12px; color: var(--ink-3); }
+  .gc--emerald .gx-note, .gc--bank .gx-note, .gc--alert .gx-note { color: rgba(255, 255, 255, 0.85); }
+  .gx-ico {
+    @apply grid h-9 w-9 shrink-0 place-items-center rounded-[11px];
+    background: rgba(var(--hi), calc(0.6 * var(--gk))); border: 1px solid var(--edge); color: var(--c1-lo);
+  }
+  .dark .gx-ico { color: var(--c1); }
+  .gc--emerald .gx-ico, .gc--bank .gx-ico, .gc--alert .gx-ico { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+  /* cột nhỏ trong thẻ số liệu: dữ liệu thật (vd. 6 tháng gần nhất), cột cuối là kỳ hiện tại */
+  .gx-bars { display: flex; align-items: flex-end; gap: 4px; height: 34px; margin-top: auto; }
+  .gx-bars i { flex: 1; min-height: 3px; border-radius: 4px 4px 2px 2px; background: rgba(var(--ink-rgb), 0.16); }
+  .gx-bars i:last-child { background: var(--c1); }
+  .gc--emerald .gx-bars i, .gc--alert .gx-bars i { background: rgba(255, 255, 255, 0.3); }
+  .gc--emerald .gx-bars i:last-child, .gc--alert .gx-bars i:last-child { background: #fff; }
+
+  /* nút */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold disabled:cursor-not-allowed disabled:opacity-50;
+    transition: transform 0.12s var(--ease-out-soft), background-color 0.15s, box-shadow 0.2s;
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
+  .btn--primary { background: var(--accent); color: var(--accent-ink); }
+  .btn--primary:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(var(--sh), 0.2); }
+  .btn--secondary { background: rgba(var(--hi), calc(0.7 * var(--gk))); border: 1px solid var(--line-2); color: var(--ink); }
+  .btn--secondary:hover:not(:disabled) { background: var(--card-solid); }
+  .btn--ghost { color: var(--ink-2); }
+  .btn--ghost:hover:not(:disabled) { background: rgba(var(--ink-rgb), 0.06); }
+
+  /* ô nhập */
+  .input {
+    @apply w-full rounded-xl px-3 py-2 text-sm outline-none placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70;
+    background: rgba(var(--hi), calc(0.85 * var(--gk)));
+    border: 1px solid var(--line-2);
+    color: var(--ink);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    min-height: 40px;
+  }
+  .dark .input { background: rgba(255, 255, 255, 0.04); }
+  .input:focus { border-color: var(--c1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c1) 22%, transparent); }
+  .input-sm { @apply rounded-lg px-2 py-1 text-sm; min-height: 32px; }
+  .label { @apply mb-1 block text-xs font-semibold; color: var(--ink-2); }
+
+  /* bảng: kẻ ngang mảnh, tiêu đề cột 12px kiểu câu */
   .table { @apply w-full text-sm; }
-  .table th { @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400; }
-  .table td { @apply border-b border-slate-100 px-3 py-2 align-middle dark:border-slate-800; }
-  .table tbody tr:hover td { @apply bg-slate-50/70 dark:bg-slate-800/40; }
+  .table th { @apply whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold; color: var(--ink-3); border-bottom: 1px solid var(--line-2); background: rgba(var(--ink-rgb), 0.025); }
+  .table td { @apply px-3 py-2.5 align-middle; border-bottom: 1px solid var(--line); }
+  .table tbody tr:last-child td { border-bottom: 0; }
+  .table tbody tr:hover td { background: rgba(var(--ink-rgb), 0.03); }
   .table .num, .num { @apply text-right tabular-nums; }
-  .link { @apply font-medium text-brand-700 hover:underline dark:text-brand-300; }
+  .link { @apply font-medium hover:underline; color: var(--c1-lo); }
+  .dark .link { color: var(--c1); }
   .seal-no { @apply whitespace-nowrap rounded-md bg-seal-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-seal-800; }
-  /* mã, số hiệu, ngày trong bảng: không xuống dòng giữa chừng */
   .nowrap, .table td.code { @apply whitespace-nowrap; }
-  /* khung cuộn ngang cho bảng trên màn hình hẹp */
   .table-wrap { @apply overflow-x-auto; }
 
-  /* Tờ tài liệu in (GCN, thông báo, phiếu tiếp nhận): khổ A4, Times */
+  /* Tờ tài liệu in (GCN, thông báo, phiếu tiếp nhận): khổ A4, Times, góc vuông như giấy thật */
   .doc {
     font-family: var(--font-doc); color: #000; background: #fff; width: 210mm; min-height: 296mm; padding: 18mm 20mm 18mm 25mm;
-    margin: 0 auto; font-size: 13pt; line-height: 1.45; box-shadow: 0 2px 16px rgba(21, 33, 58, .18);
+    margin: 0 auto; font-size: 13pt; line-height: 1.45; box-shadow: 0 2px 24px rgba(var(--sh), 0.22); letter-spacing: 0;
   }
   .doc table { border-collapse: collapse; width: 100%; }
   .doc table.doc-grid th, .doc table.doc-grid td { border: 1px solid #000; padding: 2px 6px; font-size: 11.5pt; line-height: 1.3; }
@@ -63,17 +269,32 @@ body { @apply bg-[#f4f6fa] text-[#15213a] antialiased dark:bg-[#0b1220] dark:tex
 
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
+/* hiện thẻ lần lượt khi mở Tổng quan – một lần, ngắn */
+@keyframes rise { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+.rise { animation: rise 0.45s var(--ease-out-soft) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+/* giảm trong suốt: kính thành đục */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .gc { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card-solid) !important; }
+}
+/* HIG: vùng bấm ≥ 44px trên màn hình cảm ứng */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .round { width: 44px; height: 44px; }
+}
+@media (prefers-contrast: more) {
+  :root { --ink-3: rgba(var(--ink-rgb), 0.85); --line: rgba(var(--ink-rgb), 0.25); --line-2: rgba(var(--ink-rgb), 0.35); }
+}
 
 @media print {
-  .no-print { display: none !important; }
-  /* bỏ lề thanh bên, lề trang và khung cuộn khi in để tài liệu chia trang đúng */
-  main { padding: 0 !important; max-width: none !important; }
-  .lg\:pl-64 { padding-left: 0 !important; }
-  .overflow-x-auto, .table-wrap { overflow: visible !important; }
+  .no-print, .app-bg { display: none !important; }
   body { background: white !important; color: black !important; }
+  main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
+  .app-main { padding: 0 !important; margin: 0 !important; }
+  .overflow-x-auto, .table-wrap { overflow: visible !important; }
   .doc { box-shadow: none !important; margin: 0; width: auto; min-height: auto; padding: 0; font-size: 12pt; line-height: 1.35; }
   @page { size: A4; margin: 15mm 18mm 15mm 22mm; }
 }

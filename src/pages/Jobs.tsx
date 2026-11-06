@@ -32,7 +32,8 @@ export default function Jobs() {
   const orderId = params.get("order") ?? "";
   const [field, setField] = useState("");
   const [tech, setTech] = useState("");
-  const [mine, setMine] = useState(false);
+  const [mine, setMine] = useState(params.get("mine") === "1");
+  const overdue = params.get("overdue") === "1";
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -48,6 +49,7 @@ export default function Jobs() {
     return jobs.filter((j) => {
       if (status && j.status !== status) return false;
       if (orderId && j.order_id !== orderId) return false;
+      if (overdue && !(j.due_date && j.due_date < todayStr() && !["issued", "returned", "cancelled"].includes(j.status))) return false;
       if (field && types[j.instrument_type_id]?.field_id !== field) return false;
       if (tech && j.assignee_id !== tech) return false;
       if (mine && me && j.assignee_id !== me.id && j.reviewer_id !== me.id) return false;
@@ -58,7 +60,7 @@ export default function Jobs() {
       }
       return true;
     });
-  }, [jobs, status, orderId, field, tech, mine, q, me, types, devices, customers]);
+  }, [jobs, status, orderId, overdue, field, tech, mine, q, me, types, devices, customers]);
 
   const today = todayStr();
   const technicians = useMemo(() => Object.values(users).filter((u) => u.active && auths.some((a) => a.user_id === u.id && a.role === "perform")), [users, auths]);
@@ -136,7 +138,7 @@ export default function Jobs() {
                     checked={selectable.length > 0 && selectable.every((j) => selected.has(j.id))}
                     onChange={(e) => setSelected(e.target.checked ? new Set(selectable.map((j) => j.id)) : new Set())} />
                 </th>}
-                <th>Mã phiếu</th><th>Khách hàng</th><th>Thiết bị</th><th>Loại PTĐ</th><th>KĐV</th><th>Hẹn trả</th><th>Trạng thái</th><th>Kết luận</th><th>GCN</th>
+                <th>Mã phiếu</th><th>Khách hàng</th><th>Thiết bị</th><th className="hidden 2xl:table-cell">Loại PTĐ</th><th>KĐV</th><th>Hẹn trả</th><th>Trạng thái</th><th>Kết luận</th><th>GCN</th>
               </tr>
             </thead>
             <tbody>
@@ -156,13 +158,13 @@ export default function Jobs() {
                       {j.priority === "urgent" && <Badge tone="red" className="ml-1.5">{PRIORITY_LABEL.urgent}</Badge>}
                     </td>
                     <td className="max-w-56 truncate">{customers[j.customer_id]?.name ?? "–"}</td>
-                    <td>
+                    <td className="min-w-48">
                       <div className="font-medium">{d?.name ?? "–"}</div>
                       <div className="text-xs text-slate-500">{[d?.model, d?.serial].filter(Boolean).join(" · ") || "–"}</div>
                     </td>
-                    <td>{types[j.instrument_type_id]?.name ?? "–"}</td>
-                    <td>{j.assignee_id ? users[j.assignee_id]?.full_name : <span className="text-slate-400">–</span>}</td>
-                    <td>{renderDue(j)}</td>
+                    <td className="hidden 2xl:table-cell">{types[j.instrument_type_id]?.name ?? "–"}</td>
+                    <td className="whitespace-nowrap">{j.assignee_id ? users[j.assignee_id]?.full_name : <span className="text-slate-400">–</span>}</td>
+                    <td className="whitespace-nowrap">{renderDue(j)}</td>
                     <td><Badge tone={JOB_STATUS_TONE[j.status]}>{JOB_STATUS_LABEL[j.status]}</Badge></td>
                     <td>{j.conclusion ? <Badge tone={j.conclusion === "pass" ? "green" : "red"}>{RESULT_LABEL[j.conclusion]}</Badge> : <span className="text-slate-400">–</span>}</td>
                     <td className="whitespace-nowrap">{cert ? <Link className="link" to={`/certificates/${cert.id}`} onClick={(e) => e.stopPropagation()}>{cert.number}</Link> : <span className="text-slate-400">–</span>}</td>

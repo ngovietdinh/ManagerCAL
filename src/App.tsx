@@ -42,6 +42,7 @@ function RequireCan({ action, children }: { action: Action; children: ReactNode 
 export default function App() {
   return (
     <UiProvider>
+      <div className="app-bg" aria-hidden />
       <DataProvider fallback={<Loading text="Đang khởi động…" />}>
         <HashRouter>
           <Suspense fallback={<Loading />}>

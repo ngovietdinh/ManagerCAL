@@ -25,15 +25,15 @@ export function Button({ variant = "primary", size = "md", loading, icon, classN
       {...rest}
       disabled={disabled || loading}
       className={clsx(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" && "px-2.5 py-1.5 text-xs",
-        size === "md" && "px-3.5 py-2 text-sm",
-        size === "lg" && "px-5 py-3 text-base",
-        variant === "primary" && "bg-brand-600 text-white shadow-sm hover:bg-brand-700",
-        variant === "secondary" && "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800",
-        variant === "ghost" && "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
-        variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
-        variant === "success" && "bg-emerald-600 text-white hover:bg-emerald-700",
+        "btn",
+        size === "sm" && "min-h-8 px-3 text-xs",
+        size === "md" && "min-h-10 px-4 text-sm",
+        size === "lg" && "min-h-12 px-6 text-[15px]",
+        variant === "primary" && "btn--primary",
+        variant === "secondary" && "btn--secondary",
+        variant === "ghost" && "btn--ghost",
+        variant === "danger" && "bg-red-700 text-white hover:bg-red-800",
+        variant === "success" && "bg-brand-600 text-white hover:bg-brand-700",
         className,
       )}
     >
@@ -196,36 +196,37 @@ export function Card({ className, children, title, actions, bodyClass }: { class
   return (
     <section className={clsx("card", className)}>
       {(title || actions) && (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-          <h3 className="font-semibold">{title}</h3>
+        <header className="flex flex-wrap items-center justify-between gap-2 px-5 pb-2 pt-4">
+          <h3 className="text-[15px] font-semibold tracking-tight">{title}</h3>
           <div className="flex flex-wrap items-center gap-2">{actions}</div>
         </header>
       )}
-      <div className={clsx(bodyClass ?? "p-4")}>{children}</div>
+      <div className={clsx(bodyClass ?? "px-5 pb-5 pt-3", !(title || actions) && !bodyClass && "pt-5")}>{children}</div>
     </section>
   );
 }
 
 const TONES: Record<Tone, string> = {
-  gray: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  red: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  amber: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  orange: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  blue: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300",
-  violet: "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300",
-  cyan: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
-  pink: "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
-  none: "text-slate-400",
+  // nền nhạt + chữ đậm; một màu một nghĩa (ngọc = đạt, đỏ = quá hạn / không đạt, hổ phách = chờ)
+  gray: "bg-[rgba(var(--ink-rgb),0.07)] text-slate-700 dark:text-slate-300",
+  green: "bg-[#d6f5e4] text-[#0d6b4c] dark:bg-[rgba(61,220,151,0.16)] dark:text-[#7ee6b8]",
+  red: "bg-[#fde1e1] text-[#a3242a] dark:bg-[rgba(255,122,92,0.18)] dark:text-[#ffb09a]",
+  amber: "bg-[#fff0d4] text-[#8a5a00] dark:bg-[rgba(255,209,102,0.16)] dark:text-[#ffd982]",
+  orange: "bg-[#ffe6d5] text-[#9a3d0c] dark:bg-[rgba(255,160,100,0.16)] dark:text-[#ffc29a]",
+  blue: "bg-[#e3ecf7] text-[#24476f] dark:bg-[rgba(120,170,255,0.16)] dark:text-[#b2cdf7]",
+  violet: "bg-[rgba(var(--ink-rgb),0.85)] text-[var(--chip)] dark:bg-[rgba(255,255,255,0.85)] dark:text-[#111215]",
+  cyan: "bg-[#dcf1f1] text-[#165e60] dark:bg-[rgba(90,210,210,0.16)] dark:text-[#9fe3e3]",
+  pink: "bg-[#fbe3ea] text-[#8c2a46] dark:bg-[rgba(255,140,170,0.16)] dark:text-[#ffb7c9]",
+  none: "text-slate-500",
 };
 export const toneClass = (t: Tone) => TONES[t];
 
 export function Badge({ tone = "gray", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={clsx("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium", TONES[tone], className)}>{children}</span>;
+  return <span className={clsx("inline-flex min-h-[22px] items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold", TONES[tone], className)}>{children}</span>;
 }
 
 export function Spinner({ className }: { className?: string }) {
-  return <Loader2 className={clsx("h-5 w-5 animate-spin text-brand-600", className)} />;
+  return <Loader2 className={clsx("h-5 w-5 animate-spin text-[var(--c1)]", className)} />;
 }
 
 export function Loading({ text = "Đang tải…" }: { text?: string }) {
@@ -235,7 +236,7 @@ export function Loading({ text = "Đang tải…" }: { text?: string }) {
 export function Empty({ text = "Chưa có dữ liệu", icon, action }: { text?: ReactNode; icon?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 p-10 text-center text-sm text-slate-500">
-      {icon ?? <Inbox className="h-8 w-8 text-slate-300" />}
+      {icon ?? <Inbox className="h-8 w-8 opacity-40" />}
       <div>{text}</div>
       {action}
     </div>
@@ -244,7 +245,7 @@ export function Empty({ text = "Chưa có dữ liệu", icon, action }: { text?:
 
 export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+    <div role="alert" className="flex items-start gap-3 rounded-2xl border border-[#f3c4c0] bg-[#fdecea] p-4 text-sm text-[#a3242a] dark:border-[rgba(255,122,92,0.35)] dark:bg-[rgba(255,122,92,0.12)] dark:text-[#ffb09a]">
       <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
       <div className="flex-1">{errorMessage(error)}</div>
       {onRetry && <Button size="sm" variant="secondary" onClick={onRetry}>Thử lại</Button>}
@@ -255,13 +256,13 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
 export function Stat({ label, value, tone = "gray", sub, icon, onClick, active }: { label: string; value: ReactNode; tone?: Tone; sub?: ReactNode; icon?: ReactNode; onClick?: () => void; active?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={!onClick}
-      className={clsx("card flex items-center gap-3 p-4 text-left transition disabled:cursor-default", onClick && "hover:border-brand-300", active && "ring-2 ring-brand-500")}>
-      {icon && <div className={clsx("rounded-xl p-2.5", TONES[tone])}>{icon}</div>}
-      <div className="min-w-0">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="text-2xl font-semibold tabular-nums">{value}</div>
-        {sub && <div className="text-xs text-slate-500">{sub}</div>}
+      className={clsx("card flex min-h-[96px] flex-col gap-2 px-5 py-4 text-left transition disabled:cursor-default", onClick && "hover:shadow-lg", active && "ring-2 ring-[var(--c1)]")}>
+      <div className="flex items-center gap-2 text-[13px] font-semibold">
+        {icon && <span className={clsx("grid h-7 w-7 shrink-0 place-items-center rounded-[9px] [&>svg]:h-4 [&>svg]:w-4", tone === "gray" ? "bg-[rgba(var(--ink-rgb),0.07)]" : TONES[tone])}>{icon}</span>}
+        <span className="min-w-0 truncate">{label}</span>
       </div>
+      <div className="text-[26px] font-semibold leading-none tracking-tight tabular-nums">{value}</div>
+      {sub && <div className="text-xs text-[var(--ink-3)]">{sub}</div>}
     </button>
   );
 }
@@ -271,20 +272,21 @@ export function Avatar({ name, url, size = 36 }: { name: string; url?: string | 
   const hue = [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
   if (url) return <img src={url} alt={name} style={{ width: size, height: size }} className="shrink-0 rounded-full object-cover" />;
   return (
-    <div style={{ width: size, height: size, background: `hsl(${hue} 55% 88%)`, color: `hsl(${hue} 45% 30%)`, fontSize: size * 0.38 }}
+    // tông cát ấm, khác nhau nhẹ theo tên (không dùng tím/hồng làm màu nhấn – DESIGN.md)
+    <div style={{ width: size, height: size, background: `hsl(${20 + (hue % 40)} 28% 84%)`, color: `hsl(${20 + (hue % 40)} 30% 24%)`, fontSize: size * 0.38 }}
       className="flex shrink-0 items-center justify-center rounded-full font-semibold">{initials}</div>
   );
 }
 
 export function Tabs<T extends string>({ value, onChange, items, className }: { value: T; onChange: (v: T) => void; items: { value: T; label: ReactNode; count?: number }[]; className?: string }) {
   return (
-    <div className={clsx("flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-800/70", className)}>
+    <div role="tablist" className={clsx("glass flex gap-1 overflow-x-auto rounded-full p-1", className)}>
       {items.map((t) => (
-        <button key={t.value} type="button" onClick={() => onChange(t.value)}
-          className={clsx("flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition",
-            value === t.value ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white" : "text-slate-600 hover:text-slate-900 dark:text-slate-400")}>
+        <button key={t.value} type="button" role="tab" aria-selected={value === t.value} onClick={() => onChange(t.value)}
+          className={clsx("flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+            value === t.value ? "bg-[var(--chip)] text-[var(--chip-ink)] shadow-[0_4px_14px_rgba(var(--sh),0.16)]" : "text-[var(--ink-2)] hover:bg-[rgba(var(--hi),calc(0.4*var(--gk)))]")}>
           {t.label}
-          {t.count != null && t.count > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-[10px] text-white">{t.count}</span>}
+          {t.count != null && t.count > 0 && <span className="min-w-5 rounded-full bg-[var(--accent)] px-1.5 text-center text-[11px] leading-5 text-[var(--accent-ink)]">{t.count}</span>}
         </button>
       ))}
     </div>
@@ -293,10 +295,10 @@ export function Tabs<T extends string>({ value, onChange, items, className }: { 
 
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 px-1">
+      <div className="min-w-0">
+        <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] md:text-[26px]">{title}</h1>
+        {subtitle && <p className="mt-1 text-[13px] text-[var(--ink-3)]">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -306,10 +308,10 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
 export function MonthPicker({ value, onChange }: { value: string; onChange: (m: string) => void }) {
   const shift = (n: number) => onChange(dayjs(value + "-01").add(n, "month").format("YYYY-MM"));
   return (
-    <div className="inline-flex items-center rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
-      <button type="button" className="p-2 hover:text-brand-700" onClick={() => shift(-1)} aria-label="Tháng trước"><ChevronLeft className="h-4 w-4" /></button>
+    <div className="inline-flex min-h-10 items-center rounded-full border border-[var(--line-2)] bg-[rgba(var(--hi),calc(0.85*var(--gk)))] px-1">
+      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(-1)} aria-label="Tháng trước"><ChevronLeft className="h-4 w-4" /></button>
       <input type="month" value={value} onChange={(e) => e.target.value && onChange(e.target.value)} className="w-36 bg-transparent py-1.5 text-center text-sm outline-none" />
-      <button type="button" className="p-2 hover:text-brand-700" onClick={() => shift(1)} aria-label="Tháng sau"><ChevronRight className="h-4 w-4" /></button>
+      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(1)} aria-label="Tháng sau"><ChevronRight className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -317,10 +319,10 @@ export function MonthPicker({ value, onChange }: { value: string; onChange: (m: 
 export function DateNav({ value, onChange }: { value: string; onChange: (d: string) => void }) {
   const shift = (n: number) => onChange(dayjs(value).add(n, "day").format("YYYY-MM-DD"));
   return (
-    <div className="inline-flex items-center rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
-      <button type="button" className="p-2 hover:text-brand-700" onClick={() => shift(-1)} aria-label="Hôm trước"><ChevronLeft className="h-4 w-4" /></button>
+    <div className="inline-flex min-h-10 items-center rounded-full border border-[var(--line-2)] bg-[rgba(var(--hi),calc(0.85*var(--gk)))] px-1">
+      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(-1)} aria-label="Hôm trước"><ChevronLeft className="h-4 w-4" /></button>
       <input type="date" value={value} onChange={(e) => e.target.value && onChange(e.target.value)} className="bg-transparent py-1.5 text-center text-sm outline-none" />
-      <button type="button" className="p-2 hover:text-brand-700" onClick={() => shift(1)} aria-label="Hôm sau"><ChevronRight className="h-4 w-4" /></button>
+      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(1)} aria-label="Hôm sau"><ChevronRight className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -341,15 +343,15 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: {
   }, [open, onClose]);
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={clsx("flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl dark:bg-slate-900 sm:rounded-2xl",
+    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-[rgba(20,16,12,0.38)] backdrop-blur-[3px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" className={clsx("rise flex max-h-[92vh] w-full flex-col rounded-t-[22px] border border-[var(--edge)] bg-[var(--card-solid)] shadow-[0_24px_60px_rgba(var(--sh),0.28)] sm:rounded-[22px]",
         size === "sm" && "sm:max-w-sm", size === "md" && "sm:max-w-lg", size === "lg" && "sm:max-w-3xl", size === "xl" && "sm:max-w-6xl")}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-slate-800">
-          <h2 className="text-base font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Đóng"><X className="h-5 w-5" /></button>
+        <div className="flex items-center justify-between gap-3 px-6 pb-2 pt-5">
+          <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
+          <button type="button" onClick={onClose} className="round" aria-label="Đóng"><X className="h-4 w-4" /></button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3 pb-safe dark:border-slate-800">{footer}</div>}
+        <div className="flex-1 overflow-y-auto px-6 py-3">{children}</div>
+        {footer && <div className="flex flex-wrap justify-end gap-2 px-6 pb-5 pt-3 pb-safe">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -385,8 +387,8 @@ export function UiProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="pointer-events-none fixed inset-x-0 top-3 z-[2000] flex flex-col items-center gap-2 px-3">
         {toasts.map((t) => (
-          <div key={t.id} className={clsx("pointer-events-auto max-w-md rounded-xl px-4 py-3 text-sm text-white shadow-lg",
-            t.tone === "success" && "bg-emerald-600", t.tone === "error" && "bg-red-600", t.tone === "info" && "bg-slate-800")}>{t.text}</div>
+          <div key={t.id} role="status" className={clsx("rise pointer-events-auto max-w-md rounded-full px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_30px_rgba(var(--sh),0.25)]",
+            t.tone === "success" && "bg-[#0e7558]", t.tone === "error" && "bg-[#b42318]", t.tone === "info" && "bg-[#1b1b1d]")}>{t.text}</div>
         ))}
       </div>
       <Modal open={!!confirmState} onClose={() => close(false)} title={confirmState?.title} size="sm"

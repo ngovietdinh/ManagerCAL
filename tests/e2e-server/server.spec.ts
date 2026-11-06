@@ -14,6 +14,7 @@ async function login(page: Page, email: string) {
   await expect(page).toHaveURL(/#\/$/);
 }
 async function logout(page: Page) {
+  await page.getByRole("button", { name: "Tài khoản" }).click();
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/#\/login/);
 }
@@ -32,7 +33,7 @@ test("khởi tạo hệ thống lần đầu với dữ liệu mẫu", async ({ 
   await page.getByText("Nạp dữ liệu mẫu để dùng thử").click();
   await page.getByRole("button", { name: "Khởi tạo và đăng nhập" }).click();
   await expect(page).toHaveURL(/#\/$/, { timeout: 30_000 });
-  await expect(page.locator("main")).toContainText("Tổng quan");
+  await expect(page.locator("main")).toContainText("Việc của tôi");
   await expect(page.locator("header").first()).not.toContainText("Chế độ demo");
 });
 
@@ -117,5 +118,6 @@ test("quản trị đặt mật khẩu cho nhân viên mới, nhân viên đăng
   await expect(page.getByText("Đã đặt mật khẩu cho Ngô Thị Mới")).toBeVisible();
   await logout(page);
   await login(page, "moi@congty.vn");
-  await expect(page.locator("aside").first()).toContainText("Ngô Thị Mới");
+  await page.getByRole("button", { name: "Tài khoản" }).click();
+  await expect(page.locator("header").getByText("Ngô Thị Mới")).toBeVisible();
 });

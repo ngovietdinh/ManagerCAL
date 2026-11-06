@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useData } from "@/app/data";
 import { Avatar, Button, Checkbox, Field, Input, useUi } from "@/components/ui";
 import { errorMessage } from "@/lib/errors";
@@ -32,7 +32,6 @@ export default function Login() {
 
 function PasswordLogin() {
   const { loginWithPassword } = useData();
-  const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,7 +39,7 @@ function PasswordLogin() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr(null);
-    try { await loginWithPassword(email.trim(), password); nav("/", { replace: true }); }
+    try { await loginWithPassword(email.trim(), password); /* Login tự chuyển về "/" khi đã có người dùng */ }
     catch (x) { setErr(errorMessage(x)); }
     finally { setBusy(false); }
   };
@@ -57,7 +56,6 @@ function PasswordLogin() {
 
 function SetupForm() {
   const { setup } = useData();
-  const nav = useNavigate();
   const [f, setF] = useState({ company_name: "", full_name: "", email: "", password: "", password2: "", demo: false });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -67,7 +65,6 @@ function SetupForm() {
     setBusy(true); setErr(null);
     try {
       await setup({ company_name: f.company_name.trim(), full_name: f.full_name.trim(), email: f.email.trim(), password: f.password, demo: f.demo });
-      nav("/", { replace: true });
     } catch (x) { setErr(errorMessage(x)); } finally { setBusy(false); }
   };
   const set = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
@@ -94,12 +91,11 @@ function SetupForm() {
 
 function DemoLogin() {
   const { users, login, resetDemo } = useData();
-  const nav = useNavigate();
   const ui = useUi();
   const [busy, setBusy] = useState<string | null>(null);
   const pick = async (id: string) => {
     setBusy(id);
-    try { await login(id); nav("/", { replace: true }); } catch (e) { ui.error(e); } finally { setBusy(null); }
+    try { await login(id); } catch (e) { ui.error(e); } finally { setBusy(null); }
   };
   return (
     <div className="card p-4">

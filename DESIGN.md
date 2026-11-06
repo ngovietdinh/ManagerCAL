@@ -1,86 +1,103 @@
 ---
-version: alpha
+version: 2
 name: ManagerCAL
-description: "Phòng kiểm định ngăn nắp: nền xám lạnh rất nhạt (#f4f6fa), chữ xanh mực (#15213a), một màu nhấn duy nhất là xanh kiểm định (#1e56a0) cho hành động chính và mục đang chọn; vàng đồng (#b8860b) chỉ dành cho tem và con số cần chú ý. Giao diện dùng Be Vietnam Pro, giấy chứng nhận in ra dùng Tinos (Times New Roman). Mật độ cao, bảng trước thẻ, trạng thái là nhãn nền nhạt chữ đậm."
+description: "Kính trên cát: nền cát ấm có đốm màu làm mờ (tối: 'Đêm'), lớp điều khiển là kính trong mờ viền sáng, lớp nội dung là vật liệu đục. Nhấn ngọc (#19a37e) cho đạt / xong / mục đang chọn, đỏ (#c8352b) cho quá hạn / không đạt, hổ phách cho chờ, nút chính là viên thuốc đen. Be Vietnam Pro cho giao diện, Tinos cho giấy chứng nhận in."
+source: "Cùng họ với CV và Trợ lý văn bản (SCADA Glass); nguyên tắc rút từ các repo đã gắn sao: dickwu/apple-design-skill, Nutlope/hallmark, Leonxlnx/taste-skill, emilkowalski/skills, nextlevelbuilder/ui-ux-pro-max-skill, google-labs-code/design.md, VoltAgent/awesome-design-md."
 
 colors:
-  bg: "#f4f6fa"
-  surface: "#ffffff"
-  surface-2: "#eef2f7"
-  line: "#dde3ec"
-  line-strong: "#c5cedb"
-  text: "#15213a"
-  text-2: "#4a5670"
-  text-3: "#7a8699"
-  accent: "#1e56a0"
-  accent-hover: "#174685"
-  accent-soft: "#e6eef9"
-  seal: "#b8860b"
-  seal-soft: "#fbf3dc"
-  success: "#1d6b52"
-  success-soft: "#dcefe7"
-  warning: "#a8650f"
-  warning-soft: "#f8ead3"
-  danger: "#b3261e"
-  danger-soft: "#f9e1df"
-  focus: "#2f6fed"
-  dark-bg: "#0b1220"
-  dark-surface: "#131c2e"
-  dark-text: "#e8edf5"
+  sand-b0: "#b49c82"     # nền
+  sand-b1: "#efe4d5"     # đốm sáng
+  sand-b2: "#8a6a4c"
+  ink: "rgb(24,24,26)"
+  ink-2: "rgba(24,24,26,.8)"
+  ink-3: "rgba(24,24,26,.7)"   # chữ phụ – CV dùng .52 (~3:1) đã nâng lên .7 theo HIG
+  card: "rgba(255,252,247,.92)"
+  card-solid: "#fffcf7"
+  accent: "#1b1b1d"      # nút chính (chữ trắng 17:1)
+  c1-ngoc: "#19a37e"     # tô, cột, chấm; chữ ngọc dùng #0e7558 (5.5:1)
+  c2-do: "#c8352b"       # quá hạn / không đạt; chữ đỏ #b42318 (6.4:1)
+  c3-ho-phach: "#e09a1a" # chờ soát xét / chờ ký
+  seal: "#b8860b"        # chỉ cho số tem
+  dark-b0: "#0c0d11"
+  dark-card: "#22252c"
+  dark-c1: "#3ddc97"
 
 typography:
-  page-title: { fontFamily: Be Vietnam Pro, fontSize: 22px, fontWeight: 600, letterSpacing: -0.01em }
-  section:    { fontFamily: Be Vietnam Pro, fontSize: 16px, fontWeight: 600 }
-  body:       { fontFamily: Be Vietnam Pro, fontSize: 14px, lineHeight: 1.55 }
-  small:      { fontFamily: Be Vietnam Pro, fontSize: 12px }
-  document:   { fontFamily: Tinos, fontSize: 13pt, lineHeight: 1.45 }
+  ui: { family: Be Vietnam Pro, body: 14px, small: 12–13px, min: 11px }
+  page-title: { size: 22–26px, weight: 600, tracking: -0.02em }
+  greeting: { size: clamp(28px,3.4vw,44px), weight: 600, tracking: -0.035em }
+  kpi-number: { size: clamp(28px,2.6vw,38px), weight: 600, tabular-nums }
+  document: { family: Tinos, size: 12–13pt }
 
-spacing: { unit: 4px, control-height: 40px, hit-target-desktop: 28px, hit-target-mobile: 44px, page-gutter-mobile: 16px, container: 1600px }
-rounded: { control: 10px, card: 14px, pill: 999px }
+radius: { control: 12px, pill: 999px, card: 18px, glass-bar: 20px, dialog: 22px }
+hit-target: { desktop: ">= 32px (min 28)", touch: ">= 44px" }
 ---
 
 # DESIGN.md — ManagerCAL
 
-Đọc tệp này trước khi thêm hoặc sửa màn hình, bảng, hộp thoại. Token Tailwind ở `src/index.css` (`@theme`), lớp dùng chung ở `src/components/ui.tsx`. Khi CSS và tệp này lệch nhau, CSS là sự thật.
+Đọc tệp này trước khi thêm hoặc sửa màn hình. Token ở `src/index.css` (`:root`, `:root.dark`, `@theme`); thành phần dùng chung ở `src/components/ui.tsx`; khung ở `src/layouts/MainLayout.tsx`. Khi CSS và tệp này lệch nhau, CSS là sự thật – sửa tệp này cho khớp.
 
-## Overview
-Người dùng là kiểm định viên, người soát xét, người ký và nhân viên tiếp nhận; họ làm việc với số liệu đo, số GCN, số tem cả ngày. Ứng dụng phải giống **sổ kiểm định được kẻ cẩn thận**, không giống trang quảng cáo. Ba điều làm nên khuôn mặt sản phẩm:
-1. **Xanh kiểm định** `accent` là màu nhấn duy nhất: một nút chính mỗi vùng, mục đang chọn ở thanh bên, dòng cần chú ý.
-2. **Tờ giấy chứng nhận** (`.doc`, font Tinos, khổ A4, góc vuông) luôn là bản in thật: quốc hiệu, số GCN, mã QR tra cứu, chỗ ký.
-3. **Ngôn ngữ nghề**: "phiếu", "biên bản", "chuẩn", "sai số cho phép", "tem", "ủy quyền", "soát xét", "phê duyệt" – không dùng chữ chung chung.
+## Hai lớp vật liệu
 
-## Colors
-- Nền `bg` xám lạnh, mặt làm việc `surface` trắng; phân lớp bằng đường kẻ `line`, không chồng bóng.
-- `accent` chỉ cho nút chính, mục đang chọn, liên kết. Khoảng 3% điểm ảnh có màu là vừa.
-- `seal` vàng đồng chỉ cho số tem, con số nổi bật trên tổng quan (nền `seal-soft` + chữ đậm). Không dùng vàng cho chữ nhỏ trên nền trắng.
-- Trạng thái: nhãn **nền nhạt + chữ đậm** (`Badge` tone), không nền đậm chữ trắng. Đạt = `success`, Không đạt = `danger`, chờ = `warning`. Lỗi luôn có chữ hoặc biểu tượng đi kèm, không chỉ dựa vào màu.
-- Dark mode qua lớp `.dark` trên `html`, các lớp `dark:` của Tailwind.
+| Lớp | Vật liệu | Dùng cho |
+|---|---|---|
+| Nền | đốm màu làm mờ + voan (`.app-bg`), vẽ một lần, cố định | toàn ứng dụng |
+| Điều khiển | **kính** (`.glass`): trong mờ, viền sáng, blur 26px | thanh trên, thanh bên, dock điện thoại, nhóm tab, nút tròn (`.round`) |
+| Nội dung | **đục** (`.card`, `--card` 92% trắng ngà) | bảng, biểu mẫu, biên bản, hồ sơ – mọi thứ phải đọc lâu |
+| Màn hình nhìn | thẻ kính (`.gc`) | chỉ **Tổng quan** |
 
-## Typography
-- Be Vietnam Pro cho giao diện; Tinos chỉ cho tài liệu in (GCN, thông báo không đạt, phiếu tiếp nhận, biên bản).
-- 5 cỡ chữ: 12 (nhãn, tiêu đề cột), 13 (phụ), 14 (thân), 16 (tiêu đề khối), 22 (tiêu đề trang). Không thêm cỡ lẻ.
-- Số liệu đo, tiền, ngày: căn phải, `tabular-nums`, số chữ số thập phân theo `decimals` của mẫu biên bản.
-- Tên người, số GCN, số tem, số sê-ri hiển thị nguyên văn.
+Không đặt kính lên kính; không dùng `.gc` cho màn hình nhập liệu. `prefers-reduced-transparency` → kính thành đục.
 
-## Layout
-- Thanh bên trái 256px cố định trên máy tính, trượt ra trên điện thoại. Vùng trang tối đa 1600px, lề 16px trên điện thoại.
-- Đầu trang: tiêu đề + một dòng phụ, hành động chính nằm bên phải cùng hàng (`PageHeader`). Không có hero.
-- **Bảng trước thẻ** cho mọi dữ liệu có cột (`.table`): kẻ ngang mảnh, tiêu đề cột 12px, không sọc ngựa vằn. Thẻ (`Card`) chỉ cho nhóm thông tin của một hồ sơ.
-- Bốn trạng thái cho mọi danh sách: đang tải (`Loading`), trống (`Empty` một câu + một hành động), lỗi (`ErrorBox`), đầy đủ. Thiếu dữ liệu ghi "–", không bịa số.
-- Biên bản số liệu: lưới ô nhập chặt, mỗi điểm đo một hàng, cột cuối là Đạt/Không đạt tính ngay khi gõ.
+## Màu – một màu một nghĩa
 
-## Components
-- `Button` primary (accent) chỉ một nút mỗi vùng; `secondary` viền; `ghost` trong bảng; `danger` cho thu hồi, huỷ – phải hỏi lại (`confirm`).
-- `Badge` cao 22px, pill. `Stat` cho ô số trên tổng quan. `Modal` cho biểu mẫu ngắn; biểu mẫu dài (tiếp nhận, biên bản) dùng trang riêng.
-- Kết luận nghiệp vụ (Đạt/Không đạt) luôn kèm sai số và sai số cho phép bên cạnh; phần mềm tính, người ký chịu trách nhiệm.
+- **Đen** (`--accent`): hành động chính, một nút mỗi vùng (`Button variant="primary"`, `.btn--primary`).
+- **Ngọc** (`brand-*`, `--c1`): Đạt, xong, mục đang chọn, liên kết. Chữ ngọc luôn dùng `brand-700` / `--c1-lo`.
+- **Đỏ**: quá hạn, không đạt, lỗi, huỷ. Luôn kèm chữ ("quá hạn 5 ngày", "Không đạt"), không chỉ dựa vào màu.
+- **Hổ phách**: đang chờ người khác (soát xét, ký).
+- **Vàng đồng**: chỉ số tem (`.seal-no`).
+- Trung tính tông ấm: thang `slate-*` đã được định nghĩa lại (400 = 4,9:1, 500 = 6,4:1 trên thẻ). Không dùng tím/hồng làm nhấn.
+- Thẻ nhấn trên Tổng quan: `gc--emerald` (một thẻ: GCN tháng này), `gc--alert` chỉ khi có cảnh báo thật (phiếu quá hạn > 0), `gc--bank` (thẻ tối "Việc của tôi").
 
-## Rà soát theo Apple HIG (bắt buộc trước khi chụp hình gửi duyệt)
-1. Tương phản chữ/nền ≥ 4.5:1 tính từ mã màu (`text` trên `bg` = 13.9:1; `text-3` trên `surface` = 4.6:1; chữ trắng trên `accent` = 7.2:1).
-2. Chữ ≥ 11px (nhỏ nhất trong app là 12px).
-3. Vùng bấm ≥ 28px trên máy tính, ≥ 44px trên điện thoại (nút `md` cao 36px + lề; thanh dưới điện thoại 56px).
+## Chữ
 
-## Motion
-Chỉ `transform`, `opacity`, màu; 120–240ms; ease-out; tôn trọng `prefers-reduced-motion`. Không hiệu ứng cho thao tác lặp (chuyển tab, lọc bảng).
+Be Vietnam Pro (đủ dấu tiếng Việt). Thang: 12 (nhãn, tiêu đề cột), 13 (phụ), 14 (thân), 15 (tiêu đề khối), 22–26 (tiêu đề trang); lời chào và số KPI theo clamp. Số liệu, tiền, ngày: `tabular-nums`, căn phải trong bảng. Tiêu đề viết thường kiểu câu; không chữ in hoa giãn cách. Tên người, số GCN, số tem, số sê-ri giữ nguyên văn.
+
+## Khung
+
+- Thanh trên: kính viên thuốc, cách mép 12–16px, cao 58px: logo + tên công ty | trạng thái (chấm + chế độ + giờ) | tra cứu, sáng/tối, thông báo, tài khoản (menu: đổi mật khẩu, đăng xuất).
+- Thanh bên (≥ 1024px): kính bo 20px cách mép 16px; mục đang chọn là chip trắng có bóng (như cột biểu tượng của CV).
+- Điện thoại: dock kính viên thuốc ở đáy (4 mục + "Tất cả mục"), không cuộn ngang, lề 12–16px.
+- Trang: tiêu đề + một dòng phụ, hành động chính bên phải (`PageHeader`). Không hero, trừ lời chào của Tổng quan.
+
+## Thành phần
+
+- `Button`: viên thuốc; `primary` đen, `secondary` trắng ngà viền mảnh, `ghost`, `danger` đỏ. Hành động phá huỷ phải hỏi lại.
+- `Tabs`: nhóm viên thuốc kính, mục chọn là chip trắng.
+- `Badge`: nền nhạt + chữ đậm, cao ≥ 22px.
+- `Card`: đục, bo 18px, tiêu đề 15px không kẻ ngang.
+- `Stat`: thẻ đục, nhãn + số lớn + dòng phụ.
+- Bảng `.table`: kẻ ngang mảnh, tiêu đề cột 12px kiểu câu, không sọc. Bảng luôn nằm trong `.table-wrap` để cuộn ngang trên điện thoại.
+- `Modal`: tấm đục bo 22px, nền sau mờ nhẹ.
+- Cột nhỏ trong thẻ KPI (`.gx-bars`): **dữ liệu thật** của 6 kỳ gần nhất, cột cuối là kỳ hiện tại. Không vẽ cột trang trí.
+- Giấy chứng nhận (`.doc`): tờ A4 trắng, Times, góc vuông, không theo chủ đề sáng/tối.
+
+## Chuyển động (Emil Kowalski)
+
+Chỉ `transform`, `opacity`, màu; ease-out `cubic-bezier(.2,.8,.2,1)`; nhấn nút 120ms, menu/hộp thoại ≤ 240ms; thẻ Tổng quan hiện lần lượt 50ms một lần khi mở trang. Nhấc thẻ khi rê chuột chỉ cho thẻ bấm được và chỉ trên chuột. `prefers-reduced-motion` tắt hết.
+
+## Rà soát theo Apple HIG (bắt buộc trước khi chụp hình duyệt)
+
+1. Tương phản ≥ 4,5:1 cho chữ ≤ 17px (đo từ mã màu, cả sáng và tối). Đã đo: chữ chính 17:1, `--ink-3` ~6:1, `slate-400` 4,9:1, ngọc 700 5,5:1, đỏ 700 6,4:1, chữ trắng trên nút đen 17:1, chữ trắng trên `brand-600` 4,9:1; tối: chữ phụ 6,5:1, ngọc 8,7:1.
+2. Chữ ≥ 11px (nhỏ nhất: số đếm trên chuông 11px).
+3. Vùng bấm ≥ 28px máy tính (nút nhỏ 32px, nút tròn 40px), ≥ 44px cảm ứng (`@media (pointer: coarse)`).
+
+Ngoài ra: `:focus-visible` viền ngọc 2px trên mọi phần tử; nút chỉ có biểu tượng phải có `aria-label`; `prefers-contrast: more` làm đậm viền và chữ phụ.
+
+## Không làm (hallmark / taste-skill)
+
+Gradient tím–xanh, glow; thẻ KPI có ô biểu tượng màu cầu vồng; sparkline hoặc số liệu bịa; thẻ lồng thẻ; eyebrow chữ in hoa giãn cách; emoji làm biểu tượng; `transition: all`; animate kích thước; chữ chung chung ("Bắt đầu ngay", "Mạnh mẽ") – dùng động từ nghề ("Tiếp nhận đơn mới", "Ký và phát hành").
 
 ## Known debt
-- Chưa có chế độ giấy A4 cho biên bản số liệu (mới có GCN, thông báo không đạt, phiếu tiếp nhận).
+
+- Một số trang còn class Tailwind màu trực tiếp (`text-red-700`, `bg-amber-50`…) thay vì token; khi sửa trang nào thì đổi sang token ở trang đó.
+- Thẻ "Thiết bị đến hạn" trên Tổng quan chưa có cột nhỏ (chưa có chuỗi số liệu theo kỳ có ý nghĩa).
