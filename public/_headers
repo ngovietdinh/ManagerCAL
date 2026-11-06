@@ -1,0 +1,11 @@
+# Cloudflare Pages: không lưu đệm tệp cấu hình và trang, lưu lâu tệp đã băm tên
+/config.js
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/
+  Cache-Control: no-cache
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
