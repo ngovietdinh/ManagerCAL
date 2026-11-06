@@ -40,7 +40,7 @@ function Diff({ before, after }: { before: unknown; after: unknown }) {
 
 export default function Audit() {
   const { users } = useData();
-  const { rows, loading } = useTable("audit_logs", { orderBy: { field: "created_at", dir: "desc" } });
+  const { rows, loading } = useTable("audit_logs", { orderBy: { field: "created_at", dir: "desc" }, limit: 2000 });
   const userIdx = useIndex("users");
   const [table, setTable] = useState("");
   const [user, setUser] = useState("");

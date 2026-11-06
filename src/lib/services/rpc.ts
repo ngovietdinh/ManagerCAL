@@ -10,6 +10,8 @@ export const REMOTE_METHODS = [
   "replaceCertificate", "revokeCertificate",
   "createSealBatch", "assignSeals", "voidSeal",
   "runDailyChecks", "importLibrary",
+  // trao đổi nội bộ: cả hàm đọc cũng chạy trên máy chủ (bảng chat không đọc trực tiếp được qua /api/data)
+  "chatSummary", "chatList", "chatSend", "chatRead", "chatAnswer",
 ] as const;
 export type RemoteMethod = (typeof REMOTE_METHODS)[number];
 export const isRemoteMethod = (m: string): m is RemoteMethod => (REMOTE_METHODS as readonly string[]).includes(m);

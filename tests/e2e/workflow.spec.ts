@@ -99,3 +99,46 @@ test("tiếp nhận đơn từ thiết bị đã có của khách → sinh phi�
   await expect(page.locator("main")).toContainText("TH-43I-5511");
   await expect(page.locator("main").getByText("Chờ phân công")).toHaveCount(2);
 });
+
+test("chat nội bộ: nhờ soát xét từ trang phiếu → người nhận thấy ngay ở tab khác, bấm Nhận", async ({ context }) => {
+  const errors: string[] = [];
+  const a = await context.newPage();
+  a.on("pageerror", (e) => errors.push(e.message));
+  await loginAs(a, "Lê Minh Cường");
+  const b = await context.newPage();
+  b.on("pageerror", (e) => errors.push(e.message));
+  await loginAs(b, "Phạm Thu Dung");
+
+  // Cường mở phiếu đã phân công, nhờ Dung soát xét
+  await a.bringToFront();
+  await a.goto("/#/jobs");
+  await a.locator("tr", { hasText: "KCN Tân Phú Thịnh" }).filter({ hasText: "Đã phân công" }).filter({ hasText: "COD" }).first().click();
+  await expect(a.locator("h1")).toContainText(/Phiếu DH\d{4}-\d{4}-\d{2}/);
+  const code = (await a.locator("h1").innerText()).match(/DH\d{4}-\d{4}-\d{2}/)![0];
+  await a.getByRole("button", { name: "Nhờ đồng nghiệp" }).click();
+  const dlg = a.getByRole("dialog");
+  await dlg.getByRole("radio", { name: "Soát xét" }).click();
+  await dlg.getByRole("radio", { name: /Phạm Thu Dung/ }).click();
+  await dlg.getByRole("button", { name: "Gửi lời nhờ" }).click();
+  await expect(a.getByText("Đã nhờ Phạm Thu Dung soát xét")).toBeVisible();
+
+  // Dung (tab khác) thấy tin chưa đọc mà không cần tải lại trang
+  await b.bringToFront();
+  const chatBtn = b.getByRole("button", { name: /Trao đổi nội bộ, \d+ tin chưa đọc/ });
+  await expect(chatBtn).toBeVisible({ timeout: 10_000 });
+  await chatBtn.click();
+  const panel = b.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  await panel.getByRole("button", { name: /Lê Minh Cường/ }).click();
+  await expect(panel.getByText(`Nhờ anh/chị soát xét giúp phiếu ${code} với ạ.`, { exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Nhận", exact: true }).last().click();
+  await expect(panel.getByText(/Đã nhận, mình xem ngay/).last()).toBeVisible();
+
+  // Cường thấy trả lời; gõ mã phiếu trong tin → thành thẻ trích dẫn
+  await a.bringToFront();
+  const pa = a.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  await expect(pa.getByText(/Đã nhận, mình xem ngay/).last()).toBeVisible({ timeout: 10_000 });
+  await pa.getByLabel("Nội dung tin nhắn").fill(`Cảm ơn chị, phiếu ${code} em nộp rồi ạ`);
+  await a.keyboard.press("Enter");
+  await expect(pa.getByRole("link", { name: new RegExp(code) }).last()).toBeVisible();
+  expect(errors).toEqual([]);
+});

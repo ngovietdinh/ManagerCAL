@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useData, useTable } from "@/app/data";
 import { Button, Card, Field, Input, Loading, NumberInput, PageHeader, Select, useUi } from "@/components/ui";
 import type { Settings as SettingsRow } from "@/lib/types";
+import { EmailCard, StorageCard } from "@/components/SettingsExtra";
 
 const TOKENS: [string, string][] = [
   ["{YYYY}", "năm 4 số"], ["{YY}", "năm 2 số"], ["{MM}", "tháng"], ["{SEQ}", "số thứ tự"], ["{SEQ:5}", "số thứ tự, đệm 0 đủ 5 chữ số"],
@@ -125,6 +126,8 @@ export default function Settings() {
           </div>
         </Card>
 
+        <EmailCard />
+
         <Card title="Dữ liệu">
           <p className="mb-3 text-sm">Chế độ hiện tại: <b>{mode === "demo" ? "Demo – dữ liệu lưu trong trình duyệt này" : "Máy chủ – dữ liệu lưu trên Cloudflare D1, mọi người dùng chung"}</b>.</p>
           <div className="flex flex-wrap gap-2">
@@ -134,6 +137,8 @@ export default function Settings() {
             {mode === "demo" && <Button variant="danger" onClick={async () => { if (await ui.confirm({ title: "Nạp lại dữ liệu demo?", message: "Mọi thay đổi trong trình duyệt này sẽ mất.", danger: true, confirmText: "Nạp lại" })) resetDemo(); }}>Nạp lại dữ liệu demo</Button>}
           </div>
         </Card>
+
+        <StorageCard />
       </div>
     </>
   );

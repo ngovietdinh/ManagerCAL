@@ -26,6 +26,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Audit = lazy(() => import("./pages/Audit"));
+const Chat = lazy(() => import("./pages/Chat"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { me } = useData();
@@ -52,6 +53,8 @@ export default function App() {
               <Route path="/lookup/:number" element={<Lookup />} />
               <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
                 <Route index element={<Dashboard />} />
+                <Route path="chat" element={<Chat />} />
+                <Route path="chat/:channel" element={<Chat />} />
                 <Route path="customers" element={<Customers />} />
                 <Route path="customers/:id" element={<CustomerDetail />} />
                 <Route path="devices" element={<Devices />} />

@@ -1,5 +1,6 @@
 // Điểm vào Worker cho bản gói sẵn giao diện (xem scripts/embed-assets.mjs).
-import { handleApi, type Env } from "./api";
+import { handleApi, type Ctx, type Env } from "./api";
+export { Hub } from "./hub";
 import { ASSETS } from "./embedded/assets";
 
 const decode = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -26,10 +27,11 @@ function serve(path: string): Response | null {
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname.startsWith("/api/")) {
-      const res = await handleApi(req, env);
+      const res = await handleApi(req, env, ctx);
+      if (res.status === 101) return res; // WebSocket
       res.headers.set("x-content-type-options", "nosniff");
       return res;
     }

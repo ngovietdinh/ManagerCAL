@@ -135,7 +135,7 @@ export function buildDemo() {
 }
 
 /** Đổi khi thay bộ demo: trình duyệt đang giữ bộ cũ sẽ tự xoá và nạp lại */
-export const DEMO_VERSION = "quan-trac-tu-dong-1";
+export const DEMO_VERSION = "quan-trac-tu-dong-2";
 
 /** Danh sách người dùng mẫu (id, vai trò) – dùng trong kiểm thử */
 export const demoUsers = () => buildDemo().DEMO_USERS;
@@ -304,6 +304,23 @@ export async function seedDemo(repo: Repo): Promise<void> {
   }
   // 6. Dệt nhuộm Thành Công (chi nhánh HCM) – đơn mới hôm nay, chờ phân công
   await order("c-6", ["d-6-ph", "d-6-cod", "d-6-ec", "d-6-so2"], 0, 7, true, "br-hcm");
+
+  // 7. Trao đổi nội bộ: kênh chung, lời nhờ soát xét kèm trích dẫn phiếu, chia sẻ phiếu
+  {
+    const jobsOf = async (c: string) => (await repo.list("jobs", { where: { customer_id: c } })).sort((a, b) => a.code.localeCompare(b.code));
+    const c2 = await jobsOf("c-2");
+    const c4 = await jobsOf("c-4");
+    as("u-dung");
+    await svc.chatSend({ channel: "general", text: "Chào cả nhà. Tuần này ưu tiên trạm khí thải lò nung Xi măng Đồng Lâm, khách cần GCN trước kỳ báo cáo quý cho Sở." });
+    as("u-hung");
+    await svc.chatSend({ channel: "general", text: "Em đã chuẩn bị bộ lấy mẫu đẳng động, mai lên Đồng Lâm đo đối chứng RA bụi ạ." });
+    as("u-cuong");
+    const o2 = c2.find((j) => j.status === "review");
+    if (o2) await svc.chatSend({ channel: "dm:u-cuong:u-dung", text: `Chị Dung soát xét giúp em phiếu ${o2.code} (O2 lò nung) nhé, khách hẹn thứ Hai.`, refs: [{ kind: "job", id: o2.id }], ask: { kind: "review", to_user_id: "u-dung" } });
+    as("u-binh");
+    const ph = c4.find((j) => j.status === "in_progress");
+    if (ph) await svc.chatSend({ channel: "dm:u-binh:u-cuong", text: "Anh Cường ơi, phiếu pH bệnh viện bị trả lại vì độ trôi. Anh xem giúp em số liệu lần 2 có bất thường không?", refs: [{ kind: "job", id: ph.id }], ask: { kind: "check", to_user_id: "u-cuong" } });
+  }
 
   as("u-an");
   await svc.runDailyChecks();

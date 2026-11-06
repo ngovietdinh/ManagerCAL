@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { handleApi } from "../../worker/api";
 import { createD1 } from "./d1shim";
 import { genReadings } from "@/lib/seed/demo";
@@ -151,6 +151,70 @@ describe("luồng nghiệp vụ qua API (quy tắc kiểm tra trên máy chủ)"
     const again = await call("/api/backup", { cookie: admin });
     expect(again.body.data.jobs.length).toBe(b.body.data.jobs.length);
     expect(again.body.seq).toEqual(b.body.seq);
+  });
+});
+
+describe("trao đổi nội bộ, email, dung lượng qua API", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it("tin riêng không đọc trực tiếp được; người ngoài cuộc bị chặn; rpc trả tên bảng vừa đổi", async () => {
+    expect((await call("/api/data/chat_messages", { cookie: admin })).status).toBe(404);
+    const ch = "dm:u-dung:u-em";
+    const sent = await rpc(em, "chatSend", { channel: ch, text: "Chị Dung ơi, khách Sông Lam hỏi GCN" });
+    expect(sent.status).toBe(200);
+    expect(sent.body.changed).toEqual(expect.arrayContaining(["chat_messages", "chat_channels", "chat_reads"]));
+    expect((await rpc(admin, "chatList", ch)).status).toBe(403);
+    const list = await rpc(dung, "chatList", ch);
+    expect(list.body.result.at(-1).text).toContain("Sông Lam");
+    const summ = await rpc(dung, "chatSummary");
+    expect(summ.body.result.find((c: { id: string }) => c.id === ch).unread).toBe(1);
+    expect((await rpc(dung, "chatSummary")).body.changed).toEqual([]);
+  });
+
+  it("cấu hình email: chỉ quản trị; khoá không bao giờ trả về; giao việc → gửi thư qua dịch vụ", async () => {
+    expect((await call("/api/admin/email", { cookie: em })).status).toBe(403);
+    expect((await call("/api/admin/email", { cookie: admin })).body.configured).toBe(false);
+    const saved = await call("/api/admin/email", { cookie: admin, body: { provider: "brevo", api_key: "xkeysib-bi-mat-1234", from_email: "kd@congty.vn", from_name: "KĐ QT", enabled: true } });
+    expect(saved.status).toBe(200);
+    expect(JSON.stringify(saved.body)).not.toContain("bi-mat");
+    expect(saved.body.key_hint).toBe("••••1234");
+
+    const sent: { url: string; body: Record<string, unknown>; headers: Record<string, string> }[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+      sent.push({ url, body: JSON.parse(String(init.body)), headers: init.headers as Record<string, string> });
+      return new Response("{}", { status: 201 });
+    });
+    const q = encodeURIComponent(JSON.stringify({ where: { status: "received" } }));
+    const job = (await call(`/api/data/jobs?q=${q}`, { cookie: admin })).body.rows.find((j: { instrument_type_id: string }) => j.instrument_type_id === "it-qt-cod");
+    expect((await rpc(dung, "assignJob", job.id, { assignee_id: "u-binh", reviewer_id: null, due_date: null, priority: "normal" })).status).toBe(200);
+    const mail = sent.find((x) => x.url.includes("brevo"))!;
+    expect(mail.headers["api-key"]).toBe("xkeysib-bi-mat-1234");
+    expect((mail.body.to as { email: string }[])[0].email).toBe("binh@kdqtviet.vn");
+    expect(String(mail.body.subject)).toContain(job.code);
+    expect(String(mail.body.htmlContent)).toContain(`https://mc.test/#/jobs/${job.id}`);
+
+    // tắt gửi → không gửi nữa, khoá cũ giữ nguyên
+    await call("/api/admin/email", { cookie: admin, body: { provider: "brevo", from_email: "kd@congty.vn", from_name: "KĐ QT", enabled: false } });
+    sent.length = 0;
+    const job2 = (await call(`/api/data/jobs?q=${q}`, { cookie: admin })).body.rows.find((j: { instrument_type_id: string }) => j.instrument_type_id === "it-qt-nh4");
+    await rpc(dung, "assignJob", job2.id, { assignee_id: "u-binh", reviewer_id: null, due_date: null, priority: "normal" });
+    expect(sent).toHaveLength(0);
+    expect((await call("/api/admin/email", { cookie: admin })).body.key_hint).toBe("••••1234");
+  });
+
+  it("dung lượng theo bảng", async () => {
+    expect((await call("/api/admin/storage", { cookie: em })).status).toBe(403);
+    const r = await call("/api/admin/storage", { cookie: admin });
+    const jobs = r.body.tables.find((t: { tbl: string }) => t.tbl === "jobs");
+    expect(jobs.n).toBeGreaterThan(20);
+    expect(jobs.bytes).toBeGreaterThan(10_000);
+    expect(r.body.limit_bytes).toBe(500 * 1024 * 1024);
+  });
+
+  it("WebSocket cần đăng nhập và đúng nguồn", async () => {
+    expect((await call("/api/ws")).status).toBe(401);
+    const res = await handleApi(new Request(BASE + "/api/ws", { headers: { upgrade: "websocket", origin: "https://ke-gian.example", cookie: admin } }), env);
+    expect(res.status).toBe(403);
   });
 });
 

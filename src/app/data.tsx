@@ -10,6 +10,7 @@ import { apiBase } from "@/lib/config";
 import { Services } from "@/lib/services";
 import { LocalRepo, idbClear } from "@/lib/store/local";
 import { RemoteRepo, detectServer, remoteServices } from "@/lib/store/remote";
+import { demoLink, serverLink, type LinkStatus, type Presence, type RealtimeLink } from "@/lib/store/realtime";
 import type { Repo, Query } from "@/lib/store/repo";
 import { DEMO_VERSION, seedDemo } from "@/lib/seed/demo";
 import type { Row, TableName, User } from "@/lib/types";
@@ -33,7 +34,15 @@ interface DataCtx {
   logout: () => Promise<void>;
   can: (a: Action) => boolean;
   resetDemo: () => Promise<void>;
-  version: number; // tăng mỗi khi dữ liệu đổi
+  version: number; // tăng mỗi khi dữ liệu đổi (bất kỳ bảng nào)
+  /** phiên bản riêng từng bảng – trang chỉ tải lại khi bảng nó dùng thay đổi */
+  versions: Record<string, number>;
+  /** ai đang mở ứng dụng; lần cuối thấy (ms) */
+  presence: Presence;
+  linkStatus: LinkStatus;
+  /** người đang gõ trong kênh */
+  typing: Record<string, string[]>;
+  sendTyping: (channel: string) => void;
 }
 
 const Ctx = createContext<DataCtx | null>(null);
@@ -65,7 +74,29 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
   const [ready, setReady] = useState(false);
   const [me, setMe] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [version, setVersion] = useState(0);
+  const [versions, setVersions] = useState<Record<string, number>>({});
+  const version = versions.__all ?? 0;
+  const [presence, setPresence] = useState<Presence>({ online: [], seen: {} });
+  const [linkStatus, setLinkStatus] = useState<LinkStatus>("connecting");
+  const [typing, setTyping] = useState<Record<string, string[]>>({});
+  const linkRef = useRef<RealtimeLink | null>(null);
+  // gom nhiều thay đổi liền nhau thành một lần vẽ lại
+  const pending = useRef<Set<string>>(new Set());
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bump = useCallback((t: string) => {
+    pending.current.add(t);
+    if (flushTimer.current) return;
+    flushTimer.current = setTimeout(() => {
+      flushTimer.current = null;
+      const ts = [...pending.current];
+      pending.current.clear();
+      setVersions((v) => {
+        const n: Record<string, number> = { ...v, __all: (v.__all ?? 0) + 1 };
+        for (const x of ts) n[x] = (n[x] ?? 0) + 1;
+        return n;
+      });
+    }, 40);
+  }, []);
   const [needsSetup, setNeedsSetup] = useState(false);
   const meRef = useRef<User | null>(null);
   meRef.current = me;
@@ -110,8 +141,33 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
 
   useEffect(() => {
     if (!boot) return;
-    return boot.repo.subscribe(() => setVersion((v) => v + 1));
-  }, [boot]);
+    return boot.repo.subscribe((t) => bump(t));
+  }, [boot, bump]);
+
+  // ---- kết nối thời gian thực khi đã đăng nhập
+  useEffect(() => {
+    if (!boot || !me) { setPresence({ online: [], seen: {} }); return; }
+    const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const ev = {
+      changed: (tables: string[]) => { for (const t of tables) boot.api ? boot.api.emit(t as TableName) : bump(t); },
+      presence: setPresence,
+      status: setLinkStatus,
+      typing: (uid: string, channel: string) => {
+        setTyping((x) => ({ ...x, [channel]: [...new Set([...(x[channel] ?? []), uid])] }));
+        const k = `${channel}|${uid}`;
+        clearTimeout(typingTimers.get(k));
+        typingTimers.set(k, setTimeout(() => setTyping((x) => ({ ...x, [channel]: (x[channel] ?? []).filter((u) => u !== uid) })), 4000));
+      },
+    };
+    let link: RealtimeLink;
+    if (boot.mode === "server") link = serverLink(apiBase, ev);
+    else {
+      const local = boot.repo as LocalRepo;
+      link = demoLink(me, ev, { onLocalFlush: (fn) => { local.onFlushed = fn; }, reload: (t) => local.reload(t) });
+    }
+    linkRef.current = link;
+    return () => { link.stop(); linkRef.current = null; typingTimers.forEach(clearTimeout); };
+  }, [boot, me?.id, bump]);
 
   const loadUsers = useCallback(async () => {
     if (!boot) return [];
@@ -130,7 +186,7 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
       if (JSON.stringify(u) !== JSON.stringify(me)) setMe(u);
     }).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version, boot, me?.id]);
+  }, [versions.users, versions["*"], boot, me?.id]);
 
   const value = useMemo<DataCtx | null>(() => {
     if (!boot) return null;
@@ -140,7 +196,8 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
       boot.svc.runDailyChecks().catch(console.error);
     };
     return {
-      repo: boot.repo, svc: boot.svc, api: boot.api, me, users, version, mode: boot.mode, needsSetup,
+      repo: boot.repo, svc: boot.svc, api: boot.api, me, users, version, versions, mode: boot.mode, needsSetup,
+      presence, linkStatus, typing, sendTyping: (channel) => linkRef.current?.typing(channel),
       login: async (userId) => {
         const u = await boot.repo.get("users", userId);
         if (!u || !u.active) throw new Error("INACTIVE_USER");
@@ -170,7 +227,7 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
         location.reload();
       },
     };
-  }, [boot, me, users, version, needsSetup]);
+  }, [boot, me, users, version, versions, needsSetup, presence, linkStatus, typing]);
 
   if (!ready || !value) return <>{fallback}</>;
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -184,7 +241,8 @@ export function useData() {
 
 /** Đọc một bảng, tự tải lại khi dữ liệu đổi */
 export function useTable<T extends TableName>(table: T, q?: Query<Row<T>>): { rows: Row<T>[]; loading: boolean; error: unknown; reload: () => void } {
-  const { repo, version, me } = useData();
+  const { repo, versions, me } = useData();
+  const tv = (versions[table] ?? 0) + (versions["*"] ?? 0);
   const [rows, setRows] = useState<Row<T>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -193,20 +251,21 @@ export function useTable<T extends TableName>(table: T, q?: Query<Row<T>>): { ro
     repo.list(table, JSON.parse(qKey)).then((r) => { setRows(r); setError(null); }).catch(setError).finally(() => setLoading(false));
   }, [repo, table, qKey]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { reload(); }, [reload, version, me?.id]);
+  useEffect(() => { reload(); }, [reload, tv, me?.id]);
   return { rows, loading, error, reload };
 }
 
 /** Đọc một dòng theo id */
 export function useRow<T extends TableName>(table: T, id: string | null | undefined): { row: Row<T> | null; loading: boolean; reload: () => void } {
-  const { repo, version } = useData();
+  const { repo, versions } = useData();
+  const tv = (versions[table] ?? 0) + (versions["*"] ?? 0);
   const [row, setRow] = useState<Row<T> | null>(null);
   const [loading, setLoading] = useState(true);
   const reload = useCallback(() => {
     if (!id) { setRow(null); setLoading(false); return; }
     repo.get(table, id).then(setRow).catch(() => setRow(null)).finally(() => setLoading(false));
   }, [repo, table, id]);
-  useEffect(() => { reload(); }, [reload, version]);
+  useEffect(() => { reload(); }, [reload, tv]);
   return { row, loading, reload };
 }
 

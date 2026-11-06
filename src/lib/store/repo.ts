@@ -8,6 +8,20 @@ export interface Query<R> {
   where?: Partial<R>;
   orderBy?: { field: keyof R & string; dir?: "asc" | "desc" };
   limit?: number;
+  /** Khoảng giá trị của một trường (so sánh chuỗi, vd. created_at trước một mốc – phân trang) */
+  range?: { field: keyof R & string; lt?: string; gt?: string };
+}
+
+/** Lọc theo where + range trong bộ nhớ (dùng chung cho các kho) */
+export function matchQuery(r: Record<string, unknown>, q: Query<unknown>): boolean {
+  const w = (q.where ?? {}) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(w)) if ((r[k] ?? null) !== v) return false;
+  if (q.range) {
+    const x = r[q.range.field] as string | null | undefined;
+    if (q.range.lt != null && !(x != null && x < q.range.lt)) return false;
+    if (q.range.gt != null && !(x != null && x > q.range.gt)) return false;
+  }
+  return true;
 }
 
 export interface Repo {

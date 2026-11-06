@@ -19,6 +19,9 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Đồng bộ thời gian thực + ai đang online: một Durable Object (SQLite – có trong gói miễn phí)
+  "durable_objects": { "bindings": [{ "name": "HUB", "class_name": "Hub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Hub"] }],
   "vars": {
     // Số vòng băm mật khẩu. Gói Workers miễn phí giới hạn 10 ms CPU mỗi lượt gọi:
     // nếu đăng nhập báo lỗi vượt CPU, giảm xuống (vd. 20000).

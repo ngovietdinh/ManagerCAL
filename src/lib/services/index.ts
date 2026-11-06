@@ -10,6 +10,8 @@ import type {
   Notification, Order, Procedure, Readings, Role, Row, Seal, SealBatch, Settings, Standard, TableName, User,
 } from "../types";
 import type { Repo } from "../store/repo";
+import { chatAnswer, chatList, chatRead, chatSend, chatSummary, type ChatSendInput, type ChatSummaryItem } from "./chat";
+import type { ChatAsk, ChatMessage } from "../types";
 import { AppError, newId, nowIso } from "../store/repo";
 
 class BizError extends AppError {
@@ -54,13 +56,33 @@ export class Services {
     return s;
   }
 
+  /**
+   * Nhật ký: ai, lúc nào, trước, sau. Khi sửa chỉ ghi các trường THỰC SỰ đổi (không chép lại cả phiếu kèm
+   * số liệu ở mỗi bước – trước đây chiếm ~85 % dung lượng CSDL). Lịch sử bước của phiếu đã nằm trong phiếu;
+   * nội dung GCN (snapshot) không đổi sau phát hành nên không chép vào nhật ký.
+   */
   private async audit(action: string, table: TableName, row_id: string, before: unknown, after: unknown) {
-    await this.repo.insert("audit_logs", { id: newId(), user_id: this.currentUser()?.id ?? null, action, table, row_id, before, after, created_at: nowIso() });
+    const obj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+    const SKIP = new Set(["history", "snapshot"]);
+    let b = before, a = after;
+    if (obj(before) && obj(after)) {
+      const nb: Record<string, unknown> = {}, na: Record<string, unknown> = {};
+      for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (SKIP.has(k) || JSON.stringify(before[k]) === JSON.stringify(after[k])) continue;
+        nb[k] = before[k]; na[k] = after[k];
+      }
+      b = nb; a = na;
+    } else {
+      const strip = (v: unknown) => (obj(v) && "snapshot" in v ? Object.fromEntries(Object.entries(v).filter(([k]) => !SKIP.has(k))) : v);
+      b = strip(before); a = strip(after);
+    }
+    await this.repo.insert("audit_logs", { id: newId(), user_id: this.currentUser()?.id ?? null, action, table, row_id, before: b, after: a, created_at: nowIso() });
   }
 
   /** Tạo dòng mới có kiểm tra quyền + nhật ký */
   async create<T extends TableName>(action: Action, table: T, row: Omit<Row<T>, "id" | "created_at">): Promise<Row<T>> {
     this.require(action);
+    if (table.startsWith("chat_")) throw new BizError("FORBIDDEN");
     const full = { ...row, id: newId(), created_at: nowIso() } as Row<T>;
     const saved = await this.repo.insert(table, full);
     await this.audit("create", table, saved.id, null, saved);
@@ -69,6 +91,7 @@ export class Services {
 
   async patch<T extends TableName>(action: Action, table: T, id: string, patch: Partial<Row<T>>): Promise<Row<T>> {
     this.require(action);
+    if (table.startsWith("chat_")) throw new BizError("FORBIDDEN");
     const before = await this.repo.get(table, id);
     if (!before) throw new BizError("NOT_FOUND");
     const after = await this.repo.update(table, id, patch);
@@ -78,6 +101,7 @@ export class Services {
 
   async delete<T extends TableName>(action: Action, table: T, id: string): Promise<void> {
     this.require(action);
+    if (table.startsWith("chat_")) throw new BizError("FORBIDDEN");
     const before = await this.repo.get(table, id);
     if (!before) return;
     await this.repo.remove(table, id);
@@ -106,7 +130,8 @@ export class Services {
     return `${prefix}${scope ? scope + "-" : "-"}${String(n).padStart(width, "0")}`;
   }
 
-  async notify(targets: { user_ids?: string[]; roles?: Role[]; all?: boolean }, title: string, body: string | null, link: string | null) {
+  /** opts.email: việc giao cho người nhận → máy chủ gửi kèm email (khi đã cấu hình) */
+  async notify(targets: { user_ids?: string[]; roles?: Role[]; all?: boolean }, title: string, body: string | null, link: string | null, opts: { email?: boolean } = {}) {
     const ids = new Set<string>(targets.user_ids ?? []);
     if (targets.roles?.length) {
       const users = await this.repo.list("users", { where: { active: true } as Partial<User> });
@@ -114,7 +139,7 @@ export class Services {
     }
     const me = this.currentUser()?.id;
     const rows: Notification[] = (targets.all ? [null] : [...ids].filter((id) => id !== me)).map((user_id) => ({
-      id: newId(), user_id, title, body, link, read: false, created_at: nowIso(),
+      id: newId(), user_id, title, body, link, read: false, created_at: nowIso(), ...(opts.email && user_id ? { email: true } : {}),
     }));
     for (const r of rows) await this.repo.insert("notifications", r);
   }
@@ -230,7 +255,7 @@ export class Services {
       await this.repo.insert("jobs", job);
       jobs.push(job);
     }
-    await this.notify({ roles: ["signer", "qa", "admin"] }, `Đơn ${code} mới: ${jobs.length} thiết bị chờ phân công`, null, `/jobs?order=${order.id}`);
+    await this.notify({ roles: ["signer", "qa", "admin"] }, `Đơn ${code} mới: ${jobs.length} thiết bị chờ phân công`, null, `/jobs?order=${order.id}`, { email: true });
     return { order, jobs };
   }
 
@@ -282,7 +307,7 @@ export class Services {
       history: [...job.history, this.hist(me.id, `Phân công cho ${assignee.full_name}`)],
     };
     const saved = await this.saveJob(next, before, "assign");
-    await this.notify({ user_ids: [assignee.id] }, `Bạn được phân công phiếu ${job.code}`, null, `/jobs/${job.id}`);
+    await this.notify({ user_ids: [assignee.id] }, `Bạn được phân công phiếu ${job.code}`, null, `/jobs/${job.id}`, { email: true });
     return saved;
   }
 
@@ -314,7 +339,7 @@ export class Services {
     const next: Job = { ...job, status: "review", submitted_at: nowIso(), return_reason: null, history: [...job.history, this.hist(me.id, "Nộp soát xét")] };
     const saved = await this.saveJob(next, before, "submit");
     const targets = job.reviewer_id ? { user_ids: [job.reviewer_id] } : { roles: ["reviewer", "signer"] as Role[] };
-    await this.notify(targets, `Phiếu ${job.code} chờ soát xét`, null, `/jobs/${job.id}`);
+    await this.notify(targets, `Phiếu ${job.code} chờ soát xét`, null, `/jobs/${job.id}`, { email: true });
     return saved;
   }
 
@@ -354,8 +379,8 @@ export class Services {
       ? { ...job, status: "approval", reviewer_id: me.id, review_note: data.note, review_checks: data.checks, reviewed_at: nowIso(), history: [...job.history, this.hist(me.id, "Soát xét đạt", data.note ?? undefined)] }
       : { ...job, status: "in_progress", reviewer_id: me.id, review_note: data.note, review_checks: data.checks, return_reason: data.note || "Soát xét không đạt", history: [...job.history, this.hist(me.id, "Trả lại sau soát xét", data.note ?? undefined)] };
     const saved = await this.saveJob(next, before, data.ok ? "review_ok" : "review_return");
-    if (data.ok) await this.notify({ roles: ["signer"] }, `Phiếu ${job.code} chờ phê duyệt`, null, `/jobs/${job.id}`);
-    else if (job.assignee_id) await this.notify({ user_ids: [job.assignee_id] }, `Phiếu ${job.code} bị trả lại`, data.note, `/jobs/${job.id}`);
+    if (data.ok) await this.notify({ roles: ["signer"] }, `Phiếu ${job.code} chờ phê duyệt`, null, `/jobs/${job.id}`, { email: true });
+    else if (job.assignee_id) await this.notify({ user_ids: [job.assignee_id] }, `Phiếu ${job.code} bị trả lại`, data.note, `/jobs/${job.id}`, { email: true });
     return saved;
   }
 
@@ -367,7 +392,7 @@ export class Services {
     const before = structuredClone(job);
     const next: Job = { ...job, status: "in_progress", return_reason: note, history: [...job.history, this.hist(me.id, "Trả lại khi phê duyệt", note)] };
     const saved = await this.saveJob(next, before, "approval_return");
-    if (job.assignee_id) await this.notify({ user_ids: [job.assignee_id] }, `Phiếu ${job.code} bị trả lại khi phê duyệt`, note, `/jobs/${job.id}`);
+    if (job.assignee_id) await this.notify({ user_ids: [job.assignee_id] }, `Phiếu ${job.code} bị trả lại khi phê duyệt`, note, `/jobs/${job.id}`, { email: true });
     return saved;
   }
 
@@ -583,6 +608,15 @@ export class Services {
   // ---------------------------------------------------------------------------
   // Nhắc việc hằng ngày (idempotent theo ngày)
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Trao đổi nội bộ (xem chat.ts)
+  // ---------------------------------------------------------------------------
+  chatSummary(): Promise<ChatSummaryItem[]> { return chatSummary(this); }
+  chatList(channel: string, before?: string | null, limit?: number): Promise<ChatMessage[]> { return chatList(this, channel, before, limit); }
+  chatSend(input: ChatSendInput): Promise<ChatMessage> { return chatSend(this, input); }
+  chatRead(channel: string): Promise<void> { return chatRead(this, channel); }
+  chatAnswer(message_id: string, status: Exclude<ChatAsk["status"], "open">): Promise<ChatMessage> { return chatAnswer(this, message_id, status); }
+
   async runDailyChecks(): Promise<void> {
     const today = todayStr();
     const marker = `daily:${today}`;

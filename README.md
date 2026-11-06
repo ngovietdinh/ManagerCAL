@@ -25,6 +25,15 @@ npm run dev        # mở http://localhost:5173
 
 App tự nhận biết: có API ở `/api` → chế độ máy chủ; không có (chạy dev, hosting tĩnh) → chế độ demo.
 
+## Làm việc nhiều người
+
+- **Đồng bộ ngay:** người khác nộp phiếu hay phát hành GCN thì màn hình của bạn tự cập nhật, không cần tải lại trang. Công nghệ: WebSocket qua Durable Object trên Cloudflare; ở chế độ demo, các tab trong cùng trình duyệt báo nhau.
+- **Ai đang online:** hiện trên thanh trên và trong danh sách chat, kèm "hoạt động N phút trước".
+- **Trao đổi nội bộ:** có kênh chung và tin nhắn riêng. Gõ mã phiếu (vd. `DH2611-0001-02`), mã đơn hoặc số GCN là tự thành thẻ trích dẫn, kèm trạng thái hiện tại; cũng có thể bấm kẹp giấy để chọn.
+- **Luồng nhanh "Nhờ đồng nghiệp":** ở trang phiếu, chọn Soát xét / Ký phát hành / Xem giúp. App gợi ý đúng người có ủy quyền lĩnh vực, ưu tiên người đang online. Người nhận bấm **Nhận / Đã xong / Bận** ngay trong chat, người nhờ được báo lại.
+- **Email** khi được giao việc hoặc có việc mới (Brevo/Resend), cấu hình trong Cài đặt.
+- **Dung lượng:** Cài đặt → Dung lượng dữ liệu cho dự báo bao lâu thì đầy. Phân tích chi tiết ở [docs/DUNG_LUONG.md](docs/DUNG_LUONG.md).
+
 ## Luồng nghiệp vụ
 
 ```
@@ -53,7 +62,7 @@ src/lib/services/       lớp nghiệp vụ: luồng trạng thái, đánh số,
 src/lib/store/          lớp lưu trữ: LocalRepo (IndexedDB, demo), RemoteRepo (gọi API máy chủ)
 src/lib/seed/           danh mục PTĐ, quy trình ĐLVN kèm mẫu biên bản; dữ liệu demo
 src/pages/              màn hình
-worker/                 Cloudflare Worker: API, xác thực, D1Repo (ghi gom thành một giao dịch)
+worker/                 Cloudflare Worker: API, xác thực, D1Repo (ghi gom thành một giao dịch), Hub (WebSocket), email
 migrations/             lược đồ D1
 tests/unit, tests/e2e   vitest, Playwright
 ```

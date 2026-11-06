@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import { AlertTriangle, Award, Ban, CheckCircle2, FileSignature, PackageCheck, Save, Send, UserCheck } from "lucide-react";
+import { AlertTriangle, Award, Ban, CheckCircle2, FileSignature, MessageSquareShare, PackageCheck, Save, Send, UserCheck } from "lucide-react";
+import AskModal from "@/components/chat/AskModal";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useData, useIndex, useRow, useTable } from "@/app/data";
@@ -24,7 +25,7 @@ export default function JobDetail() {
   const procedures = useIndex("procedures");
   const branches = useIndex("branches");
   const { row: cert } = useRow("certificates", job?.certificate_id);
-  const [modal, setModal] = useState<"assign" | "issue" | "return" | "cancel" | null>(null);
+  const [modal, setModal] = useState<"assign" | "issue" | "return" | "cancel" | "ask" | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (loading) return <Loading />;
@@ -59,6 +60,7 @@ export default function JobDetail() {
           {job.conclusion && <Badge tone={job.conclusion === "pass" ? "green" : "red"}>{RESULT_LABEL[job.conclusion]}</Badge>}</span>}
         subtitle={<>{type?.name ?? "–"} · {field?.name ?? "–"} · {JOB_KIND_LABEL[job.kind]}{late && <span className="ml-2 font-semibold text-red-700 dark:text-red-400">Quá hạn trả {fmtDate(job.due_date)}</span>}</>}
         actions={<>
+          <Button variant="secondary" icon={<MessageSquareShare className="h-4 w-4" />} onClick={() => setModal("ask")}>Nhờ đồng nghiệp</Button>
           {can("assign") && ["received", "assigned", "in_progress"].includes(job.status) && <Button variant="secondary" icon={<UserCheck className="h-4 w-4" />} onClick={() => setModal("assign")}>{job.assignee_id ? "Phân công lại" : "Phân công"}</Button>}
           {job.status === "approval" && can("sign") && <>
             <Button variant="secondary" onClick={() => setModal("return")}>Trả lại</Button>
@@ -140,6 +142,7 @@ export default function JobDetail() {
         </div>
       </div>
 
+      <AskModal job={job} fieldId={field?.id ?? null} open={modal === "ask"} onClose={() => setModal(null)} />
       {modal === "assign" && <AssignModal job={job} fieldId={type?.field_id ?? ""} onClose={() => setModal(null)} />}
       {modal === "issue" && <IssueModal job={job} onClose={() => setModal(null)} />}
       {modal === "return" && (

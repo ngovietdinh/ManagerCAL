@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const PAGES = ["/", "/jobs", "/orders", "/certificates", "/customers", "/devices", "/standards", "/seals", "/catalog", "/staff", "/reports", "/settings", "/audit", "/notifications"];
+const PAGES = ["/", "/jobs", "/orders", "/certificates", "/customers", "/devices", "/standards", "/seals", "/catalog", "/staff", "/reports", "/settings", "/audit", "/notifications", "/chat"];
 
 test("đăng nhập demo và mở được mọi trang chính không lỗi JS", async ({ page }) => {
   const errors: string[] = [];

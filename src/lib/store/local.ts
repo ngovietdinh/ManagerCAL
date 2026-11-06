@@ -4,7 +4,7 @@
 // =============================================================================
 import type { Row, TableName } from "../types";
 import type { Query, Repo } from "./repo";
-import { AppError } from "./repo";
+import { AppError, matchQuery } from "./repo";
 
 const DB_NAME = "managercal";
 const STORE = "tables";
@@ -113,20 +113,33 @@ export class LocalRepo implements Repo {
     this.listeners.forEach((fn) => fn(t));
   }
 
+  /** Gọi sau mỗi lần ghi xuống IndexedDB (để báo các tab khác tải lại) */
+  onFlushed: ((tables: string[]) => void) | null = null;
+
   async flush(): Promise<void> {
     if (this.memoryOnly || this.dirty.size === 0) return;
     const entries: Record<string, unknown> = {};
     for (const k of this.dirty) entries[k] = k === "__seq" ? this.seq : structuredClone((this.data as Record<string, unknown>)[k] ?? []);
     this.dirty.clear();
     await idbPut(entries);
+    this.onFlushed?.(Object.keys(entries));
+  }
+
+  /** Tab khác vừa ghi: đọc lại các bảng đó từ IndexedDB rồi báo giao diện */
+  async reload(tables: string[]): Promise<void> {
+    if (this.memoryOnly) return;
+    const all = await idbGetAll();
+    for (const k of tables) {
+      if (this.dirty.has(k)) continue; // tab này đang có thay đổi chưa ghi – giữ bản của mình
+      if (k === "__seq") this.seq = (all[k] as Record<string, number>) ?? this.seq;
+      else if (k in all) (this.data as Record<string, unknown>)[k] = all[k];
+    }
+    for (const k of tables) if (k !== "__seq") this.listeners.forEach((fn) => fn(k as TableName));
   }
 
   async list<T extends TableName>(table: T, q: Query<Row<T>> = {}): Promise<Row<T>[]> {
     let rows = this.table(table).slice();
-    if (q.where) {
-      const w = q.where as Record<string, unknown>;
-      rows = rows.filter((r) => Object.entries(w).every(([k, v]) => (r as unknown as Record<string, unknown>)[k] === v));
-    }
+    if (q.where || q.range) rows = rows.filter((r) => matchQuery(r as unknown as Record<string, unknown>, q as Query<unknown>));
     if (q.orderBy) {
       const { field, dir = "asc" } = q.orderBy;
       const m = dir === "asc" ? 1 : -1;

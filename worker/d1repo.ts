@@ -10,7 +10,7 @@
 //   số thì chỉ mục UNIQUE (số GCN, mã đơn…) làm batch sau thất bại → không trùng, không mất số.
 // =============================================================================
 import type { Query, Repo } from "../src/lib/store/repo";
-import { AppError } from "../src/lib/store/repo";
+import { AppError, matchQuery } from "../src/lib/store/repo";
 import type { Row, TableName } from "../src/lib/types";
 import type { D1Database, D1PreparedStatement } from "./d1";
 
@@ -71,7 +71,16 @@ export class D1Repo implements Repo {
         if (v === null) where.push(`json_extract(data, '$.${k}') IS NULL`);
         else { where.push(`json_extract(data, '$.${k}') = ?`); binds.push(typeof v === "boolean" ? (v ? 1 : 0) : v); }
       }
-      const res = await this.q(`SELECT id, data FROM rows WHERE ${where.join(" AND ")}`, ...binds).all<{ id: string; data: string }>();
+      const field = (f: string) => { if (!/^[a-z_][a-z0-9_]*$/i.test(f)) throw new AppError("BAD_QUERY"); return `json_extract(data, '$.${f}')`; };
+      if (q.range?.lt != null) { where.push(`${field(q.range.field)} < ?`); binds.push(q.range.lt); }
+      if (q.range?.gt != null) { where.push(`${field(q.range.field)} > ?`); binds.push(q.range.gt); }
+      // có sắp xếp + giới hạn → để CSDL làm (dùng chỉ mục, chỉ đọc đúng số dòng cần), rỗng xếp cuối như trong bộ nhớ
+      let tail = "";
+      if (q.orderBy && q.limit) {
+        const f = field(q.orderBy.field);
+        tail = ` ORDER BY ${f} IS NULL, ${f} ${q.orderBy.dir === "desc" ? "DESC" : "ASC"} LIMIT ${Math.max(1, Math.floor(q.limit))}`;
+      }
+      const res = await this.q(`SELECT id, data FROM rows WHERE ${where.join(" AND ")}${tail}`, ...binds).all<{ id: string; data: string }>();
       const m = this.tbl(table);
       const seen = new Set<string>();
       docs = [];
@@ -87,8 +96,7 @@ export class D1Repo implements Repo {
       for (const [id, d] of this.dirty.get(table) ?? []) if (d && !seen.has(id)) docs.push(d);
     }
     // lọc lại trong bộ nhớ (đúng cho cả dữ liệu đã sửa chưa ghi), sắp xếp, giới hạn
-    const w = (q.where ?? {}) as Record<string, unknown>;
-    let out = docs.filter((d) => Object.entries(w).every(([k, v]) => (d[k] ?? null) === v));
+    let out = docs.filter((d) => matchQuery(d, q as never));
     if (q.orderBy) {
       const { field, dir = "asc" } = q.orderBy;
       const s = dir === "asc" ? 1 : -1;
@@ -225,6 +233,13 @@ export class D1Repo implements Repo {
   }
 
   hasChanges() { return this.dirty.size > 0 || this.seqDirty.size > 0; }
+
+  /** Các thay đổi đang chờ ghi: bảng → bản ghi mới/sửa (gọi TRƯỚC commit; dùng để báo đồng bộ, gửi email) */
+  changeSet(): Map<string, { docs: Doc[]; inserted: Set<string> }> {
+    const out = new Map<string, { docs: Doc[]; inserted: Set<string> }>();
+    for (const [t, m] of this.dirty) out.set(t, { docs: [...m.values()].filter((d): d is Doc => !!d), inserted: new Set(this.inserted.get(t) ?? []) });
+    return out;
+  }
 
   /** Ghi mọi thay đổi trong một giao dịch. Trùng khoá duy nhất → DUPLICATE (không ghi gì). */
   async commit(after: D1PreparedStatement[] = [], before: D1PreparedStatement[] = []): Promise<void> {

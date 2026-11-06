@@ -72,6 +72,24 @@ Nên có ít nhất **hai người có vai trò Quản trị** để không ph�
 App đã được thiết kế để mọi thao tác dùng ≤ 25 truy vấn D1 (đã kiểm thử: đơn 40 thiết bị 12 truy vấn, phát hành GCN 21, nhập 2.000 tem 6).
 Băm mật khẩu tốn ~30 ms CPU: nếu đăng nhập trên gói Free báo lỗi vượt CPU, giảm `PBKDF2_ITERATIONS` trong `wrangler.jsonc` (vd. 20000) rồi deploy lại, hoặc dùng gói Paid (khuyên dùng khi chạy thật).
 
+## Đồng bộ thời gian thực, ai đang online
+
+Worker có thêm Durable Object `Hub` (khai báo trong `wrangler.jsonc`, loại SQLite, có trong gói miễn phí). Trình duyệt mở WebSocket tới `/api/ws`. Sau mỗi thao tác ghi, máy chủ báo tên các bảng vừa đổi, và trang đang mở chỉ tải lại phần đó. Tin nhắn riêng chỉ báo cho hai người trong cuộc. Khi mất mạng, app tự nối lại và trong lúc chờ thì hỏi lại 30 giây một lần. Không cần cấu hình thêm: `npm run deploy:embedded` tạo Hub ở lần đầu.
+
+## Email thông báo
+
+Gửi khi được phân công, khi có phiếu chờ soát xét hoặc chờ ký, khi phiếu bị trả lại, khi có đơn mới chờ phân công, và khi đồng nghiệp nhờ việc trong chat. Quản trị cấu hình ở **Cài đặt → Email thông báo**:
+
+1. Đăng ký **Brevo** (brevo.com, miễn phí 300 thư/ngày). Không cần tên miền riêng, chỉ cần xác minh một địa chỉ gửi, ví dụ Gmail của công ty, ở mục Senders.
+2. Vào SMTP & API → API Keys, tạo khoá rồi dán vào app. Điền email người gửi đã xác minh, Lưu, rồi bấm **Gửi thư thử cho tôi**.
+3. Hoặc dùng **Resend** nếu công ty có tên miền riêng đã xác minh.
+
+Khoá API lưu trong bảng `app_secrets` của D1. Bảng này chỉ máy chủ đọc: không trả về giao diện, không nằm trong tệp sao lưu. Có thể đặt bằng biến môi trường thay cho giao diện: `EMAIL_PROVIDER`, `EMAIL_FROM`, `EMAIL_FROM_NAME`, và `npx wrangler secret put EMAIL_API_KEY`.
+
+## Dung lượng
+
+Xem [DUNG_LUONG.md](DUNG_LUONG.md): mỗi phiếu khoảng 33 KB. Gói miễn phí 500 MB đủ khoảng 3,5 năm ở nhịp 300 phiếu/tháng. Giới hạn số dòng đọc mỗi ngày sẽ chạm trước dung lượng.
+
 ## Chạy thử tại máy (không cần tài khoản Cloudflare)
 
 - `npm run dev:cf` – Worker + D1 giả lập tại `http://localhost:8787` (dữ liệu ở `.wrangler/`).

@@ -135,3 +135,47 @@ test("quản trị đặt mật khẩu cho nhân viên mới, nhân viên đăng
   await page.getByRole("button", { name: "Tài khoản" }).click();
   await expect(page.locator("header").getByText("Ngô Thị Mới")).toBeVisible();
 });
+
+test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu đến ngay không cần tải lại", async ({ browser }) => {
+  const ca = await browser.newContext();
+  const cb = await browser.newContext();
+  const a = await ca.newPage();
+  const b = await cb.newPage();
+  await login(a, "cuong@kdqtviet.vn");
+  await login(b, "dung@kdqtviet.vn");
+
+  // Dung thấy Cường online trên thanh trên
+  await expect(b.getByRole("button", { name: /đồng nghiệp đang online: .*Lê Minh Cường/ })).toBeVisible({ timeout: 15_000 });
+
+  // Cường nhắn riêng cho Dung
+  await a.goto("/#/chat");
+  await a.getByRole("button", { name: /Phạm Thu Dung/ }).first().click();
+  await a.getByLabel("Nội dung tin nhắn").fill("Chị ơi em gửi biên bản COD rồi nhé");
+  await a.keyboard.press("Enter");
+  await expect(a.getByText("Chị ơi em gửi biên bản COD rồi nhé", { exact: true })).toBeVisible();
+
+  // Dung: số tin chưa đọc hiện ngay, mở ra đọc được
+  const chatBtn = b.getByRole("button", { name: /Trao đổi nội bộ, \d+ tin chưa đọc/ });
+  await expect(chatBtn).toBeVisible({ timeout: 10_000 });
+  await chatBtn.click();
+  const panel = b.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  await panel.getByRole("button", { name: /Lê Minh Cường/ }).click();
+  await expect(panel.getByText("Chị ơi em gửi biên bản COD rồi nhé", { exact: true })).toBeVisible();
+
+  // Dung đang xem danh sách phiếu; Cường nộp một phiếu → trạng thái ở trình duyệt của Dung đổi ngay
+  await panel.getByRole("button", { name: "Đóng khung chat" }).click();
+  await b.goto("/#/jobs");
+  await a.goto("/#/jobs");
+  await a.locator("tr", { hasText: "KCN Tân Phú Thịnh" }).filter({ hasText: "Đã phân công" }).first().click();
+  await expect(a.locator("h1")).toContainText(/Phiếu DH/);
+  const code = (await a.locator("h1").innerText()).match(/DH\d{4}-\d{4}-\d{2}/)![0];
+  const rowB = b.locator("tr", { hasText: code });
+  await expect(rowB).toContainText("Đã phân công");
+  await a.locator("label", { hasText: "CH-QTN-03" }).locator("input[type=checkbox]").check();
+  for (const btn of await a.getByRole("button", { name: "Đạt", exact: true }).all()) await btn.click();
+  await fillRecord(a);
+  await a.getByRole("button", { name: "Nộp soát xét" }).click();
+  await expect(a.getByText("Đã nộp soát xét")).toBeVisible();
+  await expect(rowB).toContainText("Chờ soát xét", { timeout: 10_000 });
+  await ca.close(); await cb.close();
+});

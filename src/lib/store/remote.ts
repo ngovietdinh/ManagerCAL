@@ -7,6 +7,7 @@ import { isRemoteMethod } from "../services/rpc";
 import type { Certificate, Row, TableName, User } from "../types";
 import type { Query, Repo } from "./repo";
 import { AppError } from "./repo";
+import { CLIENT_ID } from "./realtime";
 
 export class ApiError extends AppError {
   details?: Record<string, unknown>;
@@ -34,7 +35,6 @@ export async function detectServer(base: string): Promise<Health | null> {
 
 export class RemoteRepo implements Repo {
   private listeners = new Set<(t: TableName) => void>();
-  private timer: ReturnType<typeof setInterval> | null = null;
   onAuthLost: () => void = () => undefined;
 
   constructor(public base: string) {}
@@ -44,7 +44,7 @@ export class RemoteRepo implements Repo {
     try {
       res = await fetch(this.base + path, {
         credentials: "same-origin", cache: "no-store", ...init,
-        headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+        headers: { "content-type": "application/json", "x-client": CLIENT_ID, ...(init.headers ?? {}) },
       });
     } catch {
       throw new ApiError("NETWORK", "Mất kết nối mạng. Hãy kiểm tra Internet và thử lại.", 0);
@@ -85,8 +85,9 @@ export class RemoteRepo implements Repo {
   async nextSequence(): Promise<number> { throw new ApiError("FORBIDDEN", "Bộ đếm chỉ tăng trên máy chủ.", 403); }
 
   async rpc(method: string, args: unknown[]): Promise<unknown> {
-    const r = await this.post<{ result: unknown }>("/rpc", { method, args });
-    this.emit("settings");
+    const r = await this.post<{ result: unknown; changed?: string[] }>("/rpc", { method, args });
+    // máy chủ trả tên các bảng vừa đổi → chỉ tải lại phần đó (máy chủ cũ không trả: tải lại tất cả)
+    for (const t of r.changed ?? ["*"]) this.emit(t as TableName);
     return r.result;
   }
 
@@ -106,16 +107,10 @@ export class RemoteRepo implements Repo {
 
   emit(t: TableName) { this.listeners.forEach((fn) => fn(t)); }
 
-  /** Có thay đổi → giao diện tải lại. Ngoài ra cứ 30 giây làm mới một lần để thấy việc người khác vừa làm. */
+  /** Có thay đổi → giao diện tải lại ("*" = mọi bảng). Việc người khác làm đến qua kết nối thời gian thực (realtime.ts). */
   subscribe(fn: (t: TableName) => void): () => void {
     this.listeners.add(fn);
-    if (!this.timer && typeof window !== "undefined") {
-      this.timer = setInterval(() => { if (document.visibilityState === "visible") this.emit("jobs"); }, 30_000);
-    }
-    return () => {
-      this.listeners.delete(fn);
-      if (!this.listeners.size && this.timer) { clearInterval(this.timer); this.timer = null; }
-    };
+    return () => { this.listeners.delete(fn); };
   }
 }
 

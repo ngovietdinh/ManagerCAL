@@ -401,7 +401,46 @@ export interface Notification {
   link: string | null;
   read: boolean;
   created_at: IsoDateTime;
+  /** Việc được giao / cần người nhận xử lý → máy chủ gửi thêm email (nếu đã cấu hình) */
+  email?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Trao đổi nội bộ (chat)
+// ---------------------------------------------------------------------------
+/** Kênh: "general" (toàn công ty) hoặc "dm:<id1>:<id2>" (hai người, id sắp xếp tăng dần) */
+export interface ChatChannel {
+  id: string;
+  kind: "general" | "dm";
+  members: Id[];          // dm: 2 người; general: rỗng (mọi người)
+  count: number;          // tổng số tin – dùng tính số tin chưa đọc
+  last_at: IsoDateTime | null;
+  last_text: string | null;
+  last_user_id: Id | null;
+  created_at: IsoDateTime;
+}
+export type ChatRefKind = "job" | "order" | "certificate";
+/** Trích dẫn một công việc trong tin nhắn (nhãn do máy chủ lấy từ dữ liệu thật, không tin máy khách) */
+export interface ChatRef { kind: ChatRefKind; id: Id; label: string; sub: string | null }
+export type ChatAskKind = "review" | "sign" | "check";
+/** Lời nhờ trong tin nhắn: người nhận bấm Nhận / Xong / Bận ngay trong khung chat */
+export interface ChatAsk {
+  kind: ChatAskKind;
+  to_user_id: Id;
+  status: "open" | "accepted" | "done" | "declined";
+  answered_at: IsoDateTime | null;
+}
+export interface ChatMessage {
+  id: Id;
+  channel: string;
+  user_id: Id;
+  text: string;
+  refs: ChatRef[];
+  ask: ChatAsk | null;
+  created_at: IsoDateTime;
+}
+/** Đã đọc tới đâu: id = "<user_id>|<channel>" */
+export interface ChatRead { id: string; user_id: Id; channel: string; read_count: number; read_at: IsoDateTime; created_at: IsoDateTime }
 
 export interface AuditLog {
   id: Id;
@@ -435,6 +474,9 @@ export interface Tables {
   seals: Seal;
   notifications: Notification;
   audit_logs: AuditLog;
+  chat_channels: ChatChannel;
+  chat_messages: ChatMessage;
+  chat_reads: ChatRead;
 }
 export type TableName = keyof Tables;
 export type Row<T extends TableName> = Tables[T];

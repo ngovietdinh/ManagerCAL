@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import {
   Award, BarChart3, Bell, BookOpen, Building2, ClipboardList, FlaskConical, Gauge, History, KeyRound, LayoutDashboard, LogOut,
-  Menu, Moon, PackageOpen, Search, Settings, Stamp, Sun, Users, UsersRound, X,
+  Menu, MessagesSquare, Moon, PackageOpen, Search, Settings, Stamp, Sun, Users, UsersRound, X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
@@ -9,6 +9,8 @@ import { useData, useTable } from "@/app/data";
 import { useTheme } from "@/app/theme";
 import PasswordModal from "@/components/PasswordModal";
 import { Avatar } from "@/components/ui";
+import { ChatDockProvider, useChatDock } from "@/components/chat/ChatDock";
+import ChatView, { PresenceAvatar } from "@/components/chat/ChatView";
 import { ROLE_LABEL } from "@/lib/labels";
 import type { Action } from "@/lib/perm";
 
@@ -45,7 +47,62 @@ function Clock() {
   return <b className="tabular-nums">{now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</b>;
 }
 
+/** Ai đang online (trừ mình): chồng ảnh đại diện, bấm để mở chat */
+function OnlineStack() {
+  const { me, users, presence, linkStatus } = useData();
+  const { openChat } = useChatDock();
+  const others = presence.online.filter((id) => id !== me?.id).map((id) => users.find((u) => u.id === id)).filter((u): u is NonNullable<typeof u> => !!u);
+  const label = linkStatus === "offline" ? "Mất kết nối đồng bộ – đang thử lại" : others.length ? `${others.length} đồng nghiệp đang online: ${others.map((u) => u.full_name).join(", ")}` : "Chưa có đồng nghiệp nào online";
+  return (
+    <button type="button" onClick={() => openChat()} title={label} aria-label={label}
+      className="hidden h-[38px] items-center gap-2 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] pl-1.5 pr-3 text-[13px] xl:flex">
+      <span className="flex -space-x-2">
+        {others.slice(0, 4).map((u) => <span key={u.id} className="rounded-full ring-2 ring-[var(--card-solid)]"><PresenceAvatar user={u} online size={26} /></span>)}
+        {!others.length && <span className={clsx("ml-1.5 h-2 w-2 rounded-full", linkStatus === "offline" ? "bg-[#c8352b]" : "bg-[#12a26f]")} aria-hidden />}
+      </span>
+      <span className="tabular-nums">{linkStatus === "offline" ? "Mất kết nối" : others.length > 4 ? `+${others.length - 4} online` : `${others.length} online`}</span>
+    </button>
+  );
+}
+
+function ChatButton() {
+  const { unread, open, openChat, close } = useChatDock();
+  return (
+    <button type="button" className="round" onClick={() => (open ? close() : openChat())} aria-label={`Trao đổi nội bộ${unread ? `, ${unread} tin chưa đọc` : ""}`} aria-expanded={open} title="Trao đổi nội bộ">
+      <MessagesSquare className="h-[17px] w-[17px]" />
+      {unread > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-[#c8352b] px-1 text-center text-[11px] font-semibold leading-[18px] text-white">{unread > 99 ? "99+" : unread}</span>}
+    </button>
+  );
+}
+
+/** Khung chat trượt từ phải (máy tính) – vẫn làm việc với trang bên dưới */
+function ChatDrawer() {
+  const { open, close, channel, setChannel } = useChatDock();
+  const loc = useLocation();
+  useEffect(() => { if (loc.pathname.startsWith("/chat")) close(); }, [loc.pathname, close]);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => e.key === "Escape" && close();
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, close]);
+  if (!open) return null;
+  return (
+    <section role="dialog" aria-label="Trao đổi nội bộ" className="rise no-print fixed bottom-4 right-4 top-[86px] z-[45] hidden w-[min(780px,calc(100vw-300px))] flex-col rounded-[22px] border border-[var(--edge)] bg-[var(--card-solid)] p-3 shadow-[0_24px_60px_rgba(var(--sh),0.28)] lg:flex">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <b className="text-[15px]">Trao đổi nội bộ</b>
+        <button type="button" className="round" onClick={close} aria-label="Đóng khung chat"><X className="h-4 w-4" /></button>
+      </div>
+      <div className="min-h-0 flex-1"><ChatView channel={channel} onChannel={setChannel} /></div>
+    </section>
+  );
+}
+
 export default function MainLayout() {
+  return <ChatDockProvider><Layout /></ChatDockProvider>;
+}
+
+function Layout() {
   const { me, can, logout, mode } = useData();
   const { rows: settings } = useTable("settings");
   const { dark, toggle } = useTheme();
@@ -107,10 +164,12 @@ export default function MainLayout() {
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
+          <OnlineStack />
           <Link to="/lookup" className="round hidden sm:grid" aria-label="Tra cứu GCN công khai" title="Tra cứu GCN công khai"><Search className="h-[17px] w-[17px]" /></Link>
           <button type="button" className="round" onClick={toggle} aria-label={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>
             {dark ? <Sun className="h-[17px] w-[17px]" /> : <Moon className="h-[17px] w-[17px]" />}
           </button>
+          <ChatButton />
           <Link to="/notifications" className="round" aria-label={`Thông báo${unread ? `, ${unread} chưa đọc` : ""}`}>
             <Bell className="h-[17px] w-[17px]" />
             {unread > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-[#c8352b] px-1 text-center text-[11px] font-semibold leading-[18px] text-white">{unread > 99 ? "99+" : unread}</span>}
@@ -169,6 +228,7 @@ export default function MainLayout() {
       )}
 
       {pwOpen && me && <PasswordModal user={me} onClose={() => setPwOpen(false)} />}
+      <ChatDrawer />
       <main className="app-main mx-auto max-w-[1680px] px-3 pb-28 pt-[86px] lg:pb-8 lg:pl-[268px] lg:pr-6">
         <Outlet />
       </main>
