@@ -15,7 +15,6 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes("node_modules/exceljs")) return "exceljs";
           if (id.includes("node_modules/recharts") || id.includes("node_modules/d3")) return "charts";
-          if (id.includes("node_modules/@supabase")) return "supabase";
         },
       },
     },

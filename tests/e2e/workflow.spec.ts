@@ -5,9 +5,10 @@ import { expect, test, type Page } from "@playwright/test";
 // Phiếu dùng: cột đo xăng dầu của Công ty TNHH Xăng dầu Hoàng Gia, đã phân công cho Lê Minh Cường.
 
 async function loginAs(page: Page, name: string) {
+  // đăng xuất chắc chắn (xoá người dùng đã nhớ) rồi mới chọn người
   await page.goto("/#/login");
-  const out = page.getByRole("button", { name: "Đăng xuất" });
-  if (await out.isVisible().catch(() => false)) await out.click();
+  await page.evaluate(() => localStorage.removeItem("managercal.user"));
+  await page.reload();
   await page.getByRole("button", { name: new RegExp(name) }).click();
   await expect(page).toHaveURL(/#\/$/);
 }
@@ -39,6 +40,7 @@ test("KĐV nhập biên bản → soát xét → ký phát hành → tra cứu G
   await loginAs(page, "Phạm Thu Dung");
   await page.goto(jobUrl);
   const review = page.locator("section", { hasText: "Soát xét biên bản" });
+  await expect(review.locator("input[type=checkbox]").first()).toBeVisible();
   for (const c of await review.locator("input[type=checkbox]").all()) await c.check();
   await review.getByRole("button", { name: "Đồng ý, chuyển phê duyệt" }).click();
   await expect(page.getByText("Đã chuyển phê duyệt")).toBeVisible();

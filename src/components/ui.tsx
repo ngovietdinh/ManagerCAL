@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Loader2, X, Inbox, AlertTriangle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+  createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState,
   type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
@@ -46,22 +46,34 @@ export function Button({ variant = "primary", size = "md", loading, icon, classN
 // ---------------------------------------------------------------------------
 // Form
 // ---------------------------------------------------------------------------
+// Field cấp id cho ô nhập bên trong để nhãn gắn đúng ô (trình đọc màn hình đọc được, bấm nhãn chọn được ô)
+const FieldCtx = createContext<{ id: string; describedBy?: string } | null>(null);
+const useFieldProps = (id?: string) => {
+  const f = useContext(FieldCtx);
+  return { id: id ?? f?.id, "aria-describedby": f?.describedBy };
+};
+
 export function Field({ label, hint, error, children, className }: { label?: ReactNode; hint?: ReactNode; error?: string | null; children: ReactNode; className?: string }) {
+  const id = useId();
+  const msgId = hint || error ? `${id}-msg` : undefined;
   return (
-    <div className={className}>
-      {label && <label className="label">{label}</label>}
-      {children}
-      {hint && !error && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
+    <FieldCtx.Provider value={{ id, describedBy: msgId }}>
+      <div className={className}>
+        {label && <label className="label" htmlFor={id}>{label}</label>}
+        {children}
+        {hint && !error && <p id={msgId} className="mt-1 text-xs text-slate-500">{hint}</p>}
+        {error && <p id={msgId} className="mt-1 text-xs text-red-600" role="alert">{error}</p>}
+      </div>
+    </FieldCtx.Provider>
   );
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={clsx("input", className)} />;
+export function Input({ className, id, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...useFieldProps(id)} {...rest} className={clsx("input", className)} />;
 }
 
-export function NumberInput({ value, onChange, className, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & { value: number | null | undefined; onChange: (v: number) => void }) {
+export function NumberInput({ value, onChange, className, id, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & { value: number | null | undefined; onChange: (v: number) => void }) {
+  const fieldProps = useFieldProps(id);
   // hiển thị có dấu phân cách hàng nghìn cho số tiền
   const [text, setText] = useState(value == null ? "" : new Intl.NumberFormat("vi-VN").format(value));
   const focused = useRef(false);
@@ -70,6 +82,7 @@ export function NumberInput({ value, onChange, className, ...rest }: Omit<InputH
   }, [value]);
   return (
     <input
+      {...fieldProps}
       {...rest}
       inputMode="decimal"
       className={clsx("input text-right tabular-nums", className)}
@@ -85,12 +98,12 @@ export function NumberInput({ value, onChange, className, ...rest }: Omit<InputH
   );
 }
 
-export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={3} {...rest} className={clsx("input", className)} />;
+export function Textarea({ className, id, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea rows={3} {...useFieldProps(id)} {...rest} className={clsx("input", className)} />;
 }
 
-export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...rest} className={clsx("input pr-8", className)}>{children}</select>;
+export function Select({ className, children, id, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select {...useFieldProps(id)} {...rest} className={clsx("input pr-8", className)}>{children}</select>;
 }
 
 export function Toggle({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label?: ReactNode; hint?: ReactNode; disabled?: boolean }) {

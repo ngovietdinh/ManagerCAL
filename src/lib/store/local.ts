@@ -67,6 +67,12 @@ export class LocalRepo implements Repo {
 
   constructor(opts: { memoryOnly?: boolean } = {}) {
     this.memoryOnly = !!opts.memoryOnly || typeof indexedDB === "undefined";
+    // rời trang / ẩn tab: ghi nốt những gì còn chờ
+    if (!this.memoryOnly && typeof window !== "undefined") {
+      const flushNow = () => { this.flush().catch(console.error); };
+      window.addEventListener("pagehide", flushNow);
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushNow(); });
+    }
   }
 
   /** Nạp từ IndexedDB. Trả về true nếu đã có dữ liệu. */
@@ -102,7 +108,8 @@ export class LocalRepo implements Repo {
   private markDirty(t: TableName) {
     this.dirty.add(t);
     if (this.flushTimer) clearTimeout(this.flushTimer);
-    this.flushTimer = setTimeout(() => this.flush().catch(console.error), 150);
+    // ghi ngay ở lượt kế tiếp (gom các thay đổi cùng một thao tác), không hoãn lâu để tránh mất khi tải lại trang
+    this.flushTimer = setTimeout(() => this.flush().catch(console.error), 0);
     this.listeners.forEach((fn) => fn(t));
   }
 

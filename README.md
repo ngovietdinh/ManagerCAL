@@ -19,7 +19,11 @@ npm install
 npm run dev        # mở http://localhost:5173
 ```
 
-Không cần máy chủ: bản này chạy **chế độ demo**, dữ liệu mẫu của một công ty hư cấu được nạp vào IndexedDB của trình duyệt. Chọn một người ở màn hình đăng nhập để vào với vai trò của người đó. Muốn làm lại từ đầu: "Nạp lại dữ liệu demo" ở màn hình đăng nhập hoặc Cài đặt.
+`npm run dev` chạy **chế độ demo**: không cần máy chủ, dữ liệu mẫu của một công ty hư cấu nằm trong trình duyệt. Chọn một người ở màn hình đăng nhập để vào với vai trò của người đó.
+
+**Dùng thật (nhiều người, dữ liệu chung):** đưa lên Cloudflare – một Worker phục vụ giao diện + API, dữ liệu trong **Cloudflare D1**, đăng nhập email/mật khẩu, quy tắc nghiệp vụ kiểm tra trên máy chủ. Xem [docs/TRIEN_KHAI.md](docs/TRIEN_KHAI.md). Chạy thử bản máy chủ tại máy: `npm run dev:cf`.
+
+App tự nhận biết: có API ở `/api` → chế độ máy chủ; không có (chạy dev, hosting tĩnh) → chế độ demo.
 
 ## Luồng nghiệp vụ
 
@@ -46,18 +50,20 @@ Tiếp nhận đơn (khách, thiết bị, giá)  →  mỗi thiết bị = 1 ph
 src/lib/types.ts        kiểu dữ liệu nghiệp vụ (= lược đồ SQL)
 src/lib/calc/           bộ máy tính sai số, MPE (OIML R76 cho cân, %, tuyệt đối), độ trễ, độ lặp, lệch tâm
 src/lib/services/       lớp nghiệp vụ: luồng trạng thái, đánh số, phát hành GCN, tem, nhắc việc
-src/lib/store/          lớp lưu trữ: LocalRepo (IndexedDB, demo/offline), SupabaseRepo (máy chủ)
+src/lib/store/          lớp lưu trữ: LocalRepo (IndexedDB, demo), RemoteRepo (gọi API máy chủ)
 src/lib/seed/           danh mục PTĐ, quy trình ĐLVN kèm mẫu biên bản; dữ liệu demo
 src/pages/              màn hình
-supabase/migrations/    lược đồ PostgreSQL, RLS cho chế độ máy chủ
+worker/                 Cloudflare Worker: API, xác thực, D1Repo (ghi gom thành một giao dịch)
+migrations/             lược đồ D1
 tests/unit, tests/e2e   vitest, Playwright
 ```
 
 ## Kiểm thử
 
 ```bash
-npm test            # unit: bộ máy tính, quy tắc nghiệp vụ, dữ liệu demo
-npm run test:e2e    # Playwright: mở mọi trang, luồng chính
+npm test                 # unit: bộ máy tính, quy tắc nghiệp vụ, API máy chủ trên SQLite
+npm run test:e2e         # Playwright chế độ demo: mở mọi trang, luồng chính
+npm run test:e2e:server  # Playwright chế độ máy chủ: Worker + D1 tại máy
 npm run build       # typecheck + build
 ```
 

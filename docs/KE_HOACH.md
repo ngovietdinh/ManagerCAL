@@ -200,12 +200,12 @@ Dùng lại bộ công nghệ đã chạy ổn trong dự án `Checkin`, để d
 |---|---|---|
 | Giao diện | React 19, Vite, TypeScript, Tailwind CSS | PWA; một bộ mã cho máy tính và máy tính bảng ở hiện trường |
 | Offline | IndexedDB, hàng đợi đồng bộ, Service Worker | Chỉ áp dụng cho biên bản hiện trường và tiếp nhận |
-| Máy chủ và CSDL | Supabase: PostgreSQL, Auth, Storage, Realtime, Edge Functions | Bảo mật ở mức dòng (RLS) theo vai trò và chi nhánh; mọi quy tắc nghiệp vụ quan trọng chạy trên máy chủ |
+| Máy chủ và CSDL | Cloudflare Worker + D1 (SQLite) – đã chọn 11/2026 | Đăng nhập email/mật khẩu; mọi quy tắc nghiệp vụ chạy trên Worker; mỗi thao tác ghi là một giao dịch. Xem `docs/TRIEN_KHAI.md` |
 | Bộ máy tính toán | Thư viện TypeScript thuần (`packages/calc`) | Chạy cả trên trình duyệt (offline) và máy chủ (kiểm tra lại trước khi phát hành); kiểm thử đơn vị với các ví dụ chuẩn, ví dụ các ví dụ mẫu trong GUM |
 | Tạo PDF | Mẫu HTML render ra PDF ở Edge Function hoặc dịch vụ riêng | Lưu kèm mã băm SHA-256 để chống sửa |
 | Ký số | API ký số từ xa của nhà cung cấp chứng thư số | Chọn ở giai đoạn 0 |
 | Excel | exceljs | Nhập danh sách thiết bị, xuất báo cáo |
-| Triển khai | Vercel (giao diện) và Supabase cloud; có phương án chuyển sang VPS tự quản như `Checkin/deploy/vps` | Cân nhắc đặt dữ liệu ở Việt Nam theo Luật Bảo vệ dữ liệu cá nhân 2025 |
+| Triển khai | Một Worker phục vụ cả giao diện và API (`wrangler deploy`); D1 đặt vùng APAC | Cân nhắc yêu cầu lưu trữ dữ liệu theo Luật Bảo vệ dữ liệu cá nhân 2025 |
 | Kiểm thử | Vitest (đơn vị), Playwright (đầu–cuối), kiểm thử RLS bằng SQL | Chạy tự động khi đẩy mã (CI) |
 
 ### Cấu trúc thư mục dự kiến
@@ -215,8 +215,8 @@ ManagerCAL/
   apps/web/            # ứng dụng nội bộ và cổng khách hàng (phân luồng theo vai trò)
   packages/calc/       # tính sai số, ĐKĐBĐ, quy tắc quyết định – không phụ thuộc giao diện
   packages/templates/  # mẫu biên bản, mẫu GCN (dạng dữ liệu + HTML)
-  supabase/migrations/ # lược đồ CSDL, RLS, hàm nghiệp vụ, cron
-  supabase/functions/  # phát hành GCN, ký số, hoá đơn điện tử, gửi thông báo
+  worker/              # API Cloudflare Worker, xác thực, D1Repo
+  migrations/          # lược đồ D1
   docs/                # kế hoạch, đặc tả, hướng dẫn sử dụng
   tests/e2e/
 ```

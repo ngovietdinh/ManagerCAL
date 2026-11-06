@@ -9,7 +9,7 @@ const TOKENS: [string, string][] = [
 ];
 
 export default function Settings() {
-  const { svc, repo, mode, resetDemo } = useData();
+  const { svc, repo, mode, resetDemo, api } = useData();
   const ui = useUi();
   const { rows, loading } = useTable("settings");
   const [form, setForm] = useState<SettingsRow | null>(null);
@@ -37,10 +37,16 @@ export default function Settings() {
     } catch (e) { ui.error(e); } finally { setSaving(false); }
   };
 
-  const backup = () => {
-    const r = repo as unknown as { exportAll?: () => unknown };
-    if (!r.exportAll) { ui.toast("Chế độ này không hỗ trợ sao lưu từ trình duyệt", "error"); return; }
-    const blob = new Blob([JSON.stringify(r.exportAll(), null, 1)], { type: "application/json" });
+  const backup = async () => {
+    let data: unknown;
+    if (api) {
+      try { data = await api.request("/backup"); } catch (e) { ui.error(e); return; }
+    } else {
+      const r = repo as unknown as { exportAll?: () => unknown };
+      if (!r.exportAll) { ui.toast("Chế độ này không hỗ trợ sao lưu", "error"); return; }
+      data = r.exportAll();
+    }
+    const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `managercal-saoluu-${new Date().toISOString().slice(0, 10)}.json`;
@@ -49,12 +55,14 @@ export default function Settings() {
   };
   const restore = async (file: File) => {
     const r = repo as unknown as { replaceAll?: (data: unknown, seq: unknown) => Promise<void> };
-    if (!r.replaceAll) { ui.toast("Chế độ này không hỗ trợ khôi phục từ tệp", "error"); return; }
+    if (!api && !r.replaceAll) { ui.toast("Chế độ này không hỗ trợ khôi phục từ tệp", "error"); return; }
     try {
       const parsed = JSON.parse(await file.text()) as { data?: unknown; seq?: unknown };
       if (!parsed.data || typeof parsed.data !== "object") throw new Error("Tệp không đúng định dạng sao lưu của ManagerCAL");
-      if (!(await ui.confirm({ title: "Khôi phục từ tệp?", message: "Toàn bộ dữ liệu hiện tại trong trình duyệt sẽ bị thay bằng nội dung tệp.", danger: true, confirmText: "Khôi phục" }))) return;
-      await r.replaceAll(parsed.data, parsed.seq ?? {});
+      const where = api ? "trên máy chủ (mọi người dùng chung)" : "trong trình duyệt";
+      if (!(await ui.confirm({ title: "Khôi phục từ tệp?", message: `Toàn bộ dữ liệu hiện tại ${where} sẽ bị thay bằng nội dung tệp. Mật khẩu đăng nhập giữ nguyên.`, danger: true, confirmText: "Khôi phục" }))) return;
+      if (api) await api.post("/restore", { data: parsed.data, seq: parsed.seq ?? {} });
+      else await r.replaceAll!(parsed.data, parsed.seq ?? {});
       ui.toast("Đã khôi phục, tải lại trang…");
       setTimeout(() => location.reload(), 800);
     } catch (e) { ui.error(e); }
@@ -118,12 +126,12 @@ export default function Settings() {
         </Card>
 
         <Card title="Dữ liệu">
-          <p className="mb-3 text-sm">Chế độ hiện tại: <b>{mode === "demo" ? "Demo – dữ liệu lưu trong trình duyệt này" : "Máy chủ"}</b>.</p>
+          <p className="mb-3 text-sm">Chế độ hiện tại: <b>{mode === "demo" ? "Demo – dữ liệu lưu trong trình duyệt này" : "Máy chủ – dữ liệu lưu trên Cloudflare D1, mọi người dùng chung"}</b>.</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={backup}>Sao lưu (tải JSON)</Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()}>Khôi phục từ JSON</Button>
             <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) restore(f); e.target.value = ""; }} />
-            <Button variant="danger" onClick={async () => { if (await ui.confirm({ title: "Nạp lại dữ liệu demo?", message: "Mọi thay đổi trong trình duyệt này sẽ mất.", danger: true, confirmText: "Nạp lại" })) resetDemo(); }}>Nạp lại dữ liệu demo</Button>
+            {mode === "demo" && <Button variant="danger" onClick={async () => { if (await ui.confirm({ title: "Nạp lại dữ liệu demo?", message: "Mọi thay đổi trong trình duyệt này sẽ mất.", danger: true, confirmText: "Nạp lại" })) resetDemo(); }}>Nạp lại dữ liệu demo</Button>}
           </div>
         </Card>
       </div>

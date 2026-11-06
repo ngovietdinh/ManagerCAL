@@ -418,8 +418,10 @@ function IssueModal({ job, onClose }: { job: Job; onClose: () => void }) {
     if (me) svc.nextSealFor(me.id).then((s) => { if (s) setSealNo((v) => v || s.number); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.id]);
+  // điền nơi thực hiện mặc định khi đã tải đủ đơn hàng, khách, cài đặt (hiện trường → địa chỉ khách)
   useEffect(() => {
-    setPlace((p) => p || (order?.onsite ? customer?.address ?? "" : settings[0]?.company.address ?? ""));
+    if (!order || !settings.length || (order.onsite && !customer)) return;
+    setPlace((p) => p || (order.onsite ? customer?.address ?? "" : settings[0].company.address));
   }, [order, customer, settings]);
 
   const seal: Seal | undefined = seals.find((s) => s.number === sealNo.trim());

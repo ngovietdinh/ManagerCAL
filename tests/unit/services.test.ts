@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { LocalRepo } from "@/lib/store/local";
 import { Services } from "@/lib/services";
-import { seedDemo, DEMO_USERS, genReadings } from "@/lib/seed/demo";
+import { seedDemo, demoUsers, genReadings } from "@/lib/seed/demo";
+const DEMO_USERS = demoUsers();
 import type { User } from "@/lib/types";
 
 let repo: LocalRepo;

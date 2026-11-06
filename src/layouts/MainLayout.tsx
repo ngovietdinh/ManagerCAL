@@ -8,6 +8,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useData, useTable } from "@/app/data";
 import { Avatar } from "@/components/ui";
 import { ROLE_LABEL } from "@/lib/labels";
+import PasswordModal from "@/components/PasswordModal";
 import type { Action } from "@/lib/perm";
 
 type NavItem = { to: string; label: string; icon: typeof Users; end?: boolean; action?: Action };
@@ -37,6 +38,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
 
 export default function MainLayout() {
   const { me, can, logout, mode } = useData();
+  const [pwOpen, setPwOpen] = useState(false);
   const { rows: settings } = useTable("settings");
   const [open, setOpen] = useState(false);
   const loc = useLocation();
@@ -76,7 +78,9 @@ export default function MainLayout() {
           <Search className="h-4 w-4" /> Tra cứu GCN (công khai)
         </Link>
         <div className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2">
-          <Avatar name={me?.full_name ?? "?"} size={32} />
+          {mode === "server"
+            ? <button type="button" onClick={() => setPwOpen(true)} className="rounded-full" aria-label="Đổi mật khẩu" title="Đổi mật khẩu"><Avatar name={me?.full_name ?? "?"} size={32} /></button>
+            : <Avatar name={me?.full_name ?? "?"} size={32} />}
           <div className="min-w-0 flex-1 text-sm">
             <div className="truncate font-medium">{me?.full_name}</div>
             <div className="truncate text-xs text-slate-500">{me?.roles.map((r) => ROLE_LABEL[r]).join(", ")}</div>
@@ -110,6 +114,7 @@ export default function MainLayout() {
           {unread > 0 && <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">{unread > 99 ? "99+" : unread}</span>}
         </Link>
       </header>
+      {pwOpen && me && <PasswordModal user={me} onClose={() => setPwOpen(false)} />}
       <main className="mx-auto max-w-[1600px] p-4 lg:p-8">
         <Outlet />
       </main>

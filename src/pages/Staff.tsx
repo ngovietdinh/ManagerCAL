@@ -5,6 +5,7 @@ import { useData, useIndex, useTable } from "@/app/data";
 import { Badge, Button, Card, Checkbox, Empty, Field, Input, Loading, Modal, PageHeader, Select, Tabs, Toggle, useUi } from "@/components/ui";
 import { dayjs, fmtDate, todayStr } from "@/lib/format";
 import { AUTH_ROLE_LABEL, ROLES, ROLE_LABEL } from "@/lib/labels";
+import PasswordModal from "@/components/PasswordModal";
 import type { AuthRole, Authorization, Role, User } from "@/lib/types";
 
 type UserForm = Omit<User, "id" | "created_at">;
@@ -28,7 +29,8 @@ export default function Staff() {
 }
 
 function UsersTab() {
-  const { svc, me, can } = useData();
+  const { svc, me, can, api } = useData();
+  const [pwFor, setPwFor] = useState<{ id: string; full_name: string } | null>(null);
   const ui = useUi();
   const { rows, loading } = useTable("users", { orderBy: { field: "code" } });
   const branches = useIndex("branches");
@@ -45,7 +47,11 @@ function UsersTab() {
     setSaving(true);
     try {
       if (edit.id) await svc.patch("users", "users", edit.id, f);
-      else await svc.create("users", "users", f);
+      else {
+        const created = await svc.create("users", "users", f);
+        // chế độ máy chủ: người mới cần mật khẩu để đăng nhập
+        if (api && created) setPwFor({ id: created.id, full_name: created.full_name });
+      }
       ui.toast("Đã lưu");
       setEdit(null);
     } catch (e) { ui.error(e); } finally { setSaving(false); }
@@ -70,13 +76,17 @@ function UsersTab() {
                   <td className="font-mono text-xs">{u.inspector_card_no ?? "–"}</td>
                   <td>{u.inspector_card_expiry ? <Badge tone={cardTone(u.inspector_card_expiry)}>{fmtDate(u.inspector_card_expiry)}</Badge> : "–"}</td>
                   <td><Badge tone={u.active ? "green" : "red"}>{u.active ? "Hoạt động" : "Khoá"}</Badge></td>
-                  <td className="text-right">{editable && <Button size="sm" variant="ghost" onClick={() => { const { id, created_at: _c, ...form } = u; void _c; setEdit({ id, form }); }}>Sửa</Button>}</td>
+                  <td className="whitespace-nowrap text-right">{editable && <>
+                    {api && <Button size="sm" variant="ghost" className="min-h-7" onClick={() => setPwFor({ id: u.id, full_name: u.full_name })}>Mật khẩu</Button>}
+                    <Button size="sm" variant="ghost" className="min-h-7" onClick={() => { const { id, created_at: _c, ...form } = u; void _c; setEdit({ id, form }); }}>Sửa</Button>
+                  </>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      {pwFor && <PasswordModal user={pwFor} onClose={() => setPwFor(null)} />}
       <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? "Sửa nhân sự" : "Thêm nhân sự"} size="lg"
         footer={<><Button variant="secondary" onClick={() => setEdit(null)}>Huỷ</Button><Button loading={saving} onClick={save}>Lưu</Button></>}>
         {edit && (

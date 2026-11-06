@@ -1,0 +1,28 @@
+// Cloudflare Worker: phục vụ giao diện (dist/) + API (/api/*) + CSDL D1.
+// Lần đầu đưa lên: `npm run cf:setup` (tạo CSDL D1, ghi database_id vào đây), sau đó `npm run deploy`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "managercal",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "managercal",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Số vòng băm mật khẩu. Gói Workers miễn phí giới hạn 10 ms CPU mỗi lượt gọi:
+    // nếu đăng nhập báo lỗi vượt CPU, giảm xuống (vd. 20000).
+    "PBKDF2_ITERATIONS": "100000"
+  },
+  "observability": { "enabled": true }
+}
