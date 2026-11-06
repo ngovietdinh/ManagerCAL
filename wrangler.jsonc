@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "managercal",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "5ff54f86-c6fe-4cc0-90c9-63003caf8875",
       "migrations_dir": "migrations"
     }
   ],

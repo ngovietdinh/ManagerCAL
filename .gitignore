@@ -6,3 +6,5 @@ test-results
 playwright-report
 *.tsbuildinfo
 .wrangler
+worker/embedded/
+wrangler.embedded.json

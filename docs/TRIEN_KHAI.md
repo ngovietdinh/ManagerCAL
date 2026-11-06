@@ -17,6 +17,12 @@ Trình duyệt ──► Worker "managercal" ──► /api/*  → API (worker/a
 
 Quy tắc nghiệp vụ (ủy quyền, chuẩn quá hạn, người soát xét khác người làm, số GCN không trùng…) chạy **trên máy chủ**: máy khách chỉ gửi yêu cầu, Worker chạy lớp `Services` với đúng người dùng của phiên. Mỗi thao tác ghi là **một giao dịch** (ghi hết hoặc không ghi gì).
 
+## Bản đang chạy
+
+- Địa chỉ: **https://managercal.gsnvbu.workers.dev**
+- CSDL D1: `managercal` (id `5ff54f86-c6fe-4cc0-90c9-63003caf8875`, vùng APAC), đã áp lược đồ `0001_init.sql`.
+- Đã kiểm tra trên Cloudflare thật (06/11/2026): khởi tạo kèm dữ liệu mẫu, đăng nhập (không vượt CPU), đọc dữ liệu, gọi nghiệp vụ. Dữ liệu thử đã xoá, hệ thống đang ở màn **Khởi tạo hệ thống**.
+
 ## Lần đầu
 
 1. **Token Cloudflare**: dash.cloudflare.com → My Profile → API Tokens → Create Token → Custom token, quyền:
@@ -36,6 +42,8 @@ Gắn tên miền riêng: Cloudflare dashboard → Workers → managercal → Se
 ## Cập nhật phiên bản
 
 `npm run deploy` (lược đồ mới trong `migrations/` tự áp; dữ liệu giữ nguyên).
+
+**Cách dự phòng – `npm run deploy:embedded`**: gói giao diện vào thẳng mã Worker (không dùng tính năng tệp tĩnh của Cloudflare). Dùng khi `npm run deploy` lỗi ở bước tải tệp (`assets/upload … 401`), vd. chạy sau một proxy ghi đè header Authorization. Bản đang chạy được đưa lên bằng cách này. Giới hạn: mã Worker sau nén ≤ 3 MB (gói miễn phí); hiện khoảng 630 KB.
 
 ## Sao lưu
 
