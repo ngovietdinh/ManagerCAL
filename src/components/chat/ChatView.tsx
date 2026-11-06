@@ -22,7 +22,7 @@ export function PresenceAvatar({ user, online, size = 36 }: { user: Pick<User, "
   return (
     <span className="relative inline-flex shrink-0">
       <Avatar name={user.full_name} size={size} />
-      {online && <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[var(--card-solid)] bg-[#12a26f]" aria-hidden />}
+      {online && <span className={clsx("absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--card-solid)] bg-[#12a26f]", size < 30 ? "h-2.5 w-2.5" : "h-3.5 w-3.5")} aria-hidden />}
     </span>
   );
 }

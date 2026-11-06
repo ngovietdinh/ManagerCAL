@@ -55,12 +55,12 @@ function OnlineStack() {
   const label = linkStatus === "offline" ? "Mất kết nối đồng bộ – đang thử lại" : others.length ? `${others.length} đồng nghiệp đang online: ${others.map((u) => u.full_name).join(", ")}` : "Chưa có đồng nghiệp nào online";
   return (
     <button type="button" onClick={() => openChat()} title={label} aria-label={label}
-      className="hidden h-[38px] items-center gap-2 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] pl-1.5 pr-3 text-[13px] xl:flex">
-      <span className="flex -space-x-2">
-        {others.slice(0, 4).map((u) => <span key={u.id} className="rounded-full ring-2 ring-[var(--card-solid)]"><PresenceAvatar user={u} online size={26} /></span>)}
+      className="hidden h-[38px] items-center gap-2 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] pl-1.5 pr-3 text-[13px] lg:flex">
+      <span className="flex items-center gap-1">
+        {others.slice(0, 4).map((u) => <PresenceAvatar key={u.id} user={u} online size={26} />)}
         {!others.length && <span className={clsx("ml-1.5 h-2 w-2 rounded-full", linkStatus === "offline" ? "bg-[#c8352b]" : "bg-[#12a26f]")} aria-hidden />}
       </span>
-      <span className="tabular-nums">{linkStatus === "offline" ? "Mất kết nối" : others.length > 4 ? `+${others.length - 4} online` : `${others.length} online`}</span>
+      <span className="whitespace-nowrap tabular-nums">{linkStatus === "offline" ? "Mất kết nối" : others.length > 4 ? `+${others.length - 4} online` : `${others.length} online`}</span>
     </button>
   );
 }
@@ -103,7 +103,7 @@ export default function MainLayout() {
 }
 
 function Layout() {
-  const { me, can, logout, mode } = useData();
+  const { me, can, logout, mode, linkStatus } = useData();
   const { rows: settings } = useTable("settings");
   const { dark, toggle } = useTheme();
   const [sheet, setSheet] = useState(false);
@@ -155,12 +155,12 @@ function Layout() {
           </span>
         </Link>
         <div className="flex-1" />
-        <div className="hidden h-[38px] items-center gap-2.5 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] px-4 text-[13px] md:flex">
+        <div className="hidden h-[38px] items-center gap-2.5 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] whitespace-nowrap px-4 text-[13px] md:flex">
           <span className={clsx("h-2 w-2 rounded-full", mode === "server" ? "bg-[var(--c1)]" : "bg-[var(--c3)]")} aria-hidden />
           <span>{mode === "server" ? "Máy chủ · dữ liệu dùng chung" : "Demo · dữ liệu trong trình duyệt"}</span>
-          <span className="h-4 w-px bg-[rgba(var(--ink-rgb),0.15)]" aria-hidden />
-          <span className="text-[var(--ink-2)]">{new Date().toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
-          <Clock />
+          <span className="h-4 w-px bg-[rgba(var(--ink-rgb),0.15)] lg:max-xl:hidden" aria-hidden />
+          <span className="text-[var(--ink-2)] lg:max-xl:hidden">{new Date().toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}</span>
+          <span className="lg:max-xl:hidden"><Clock /></span>
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
@@ -175,9 +175,13 @@ function Layout() {
             {unread > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-[#c8352b] px-1 text-center text-[11px] font-semibold leading-[18px] text-white">{unread > 99 ? "99+" : unread}</span>}
           </Link>
           <div className="relative" ref={menuRef}>
-            <button type="button" className="round round--white overflow-hidden p-0" onClick={() => setMenu((m) => !m)} aria-label="Tài khoản" aria-expanded={menu}>
+            <button type="button" className="round round--white overflow-hidden p-0" onClick={() => setMenu((m) => !m)} aria-label="Tài khoản" aria-expanded={menu}
+              title={linkStatus === "online" ? "Bạn đang online" : linkStatus === "connecting" ? "Đang kết nối…" : "Mất kết nối – đang thử lại"}>
               <Avatar name={me?.full_name ?? "?"} size={38} />
             </button>
+            {/* chấm trạng thái của chính mình: xanh = online, hổ phách = đang kết nối, đỏ = mất kết nối */}
+            <span aria-hidden className={clsx("pointer-events-none absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[var(--card-solid)]",
+              linkStatus === "online" ? "bg-[#12a26f]" : linkStatus === "connecting" ? "bg-[#e0a100]" : "bg-[#c8352b]")} />
             {menu && (
               <div className="rise absolute right-0 top-[50px] z-50 w-64 rounded-[18px] border border-[var(--edge)] bg-[var(--card-solid)] p-2 shadow-[0_18px_50px_rgba(var(--sh),0.22)]">
                 <div className="px-3 py-2">
