@@ -45,6 +45,7 @@ function ConversationList({ current, onPick }: { current: string | null; onPick:
       .sort((a, b) => (Number(online.has(b.u.id)) - Number(online.has(a.u.id))) || (b.ch?.last_at ?? "").localeCompare(a.ch?.last_at ?? "") || a.u.full_name.localeCompare(b.u.full_name, "vi"));
   }, [users, me, q, byChannel, online]);
   const onlineCount = presence.online.length;
+  const othersOnline = presence.online.filter((id) => id !== me!.id).length;
 
   const Row = ({ id, title, sub, unread, avatar }: { id: string; title: string; sub: string; unread: number; avatar: React.ReactNode }) => (
     <button type="button" onClick={() => onPick(id)} aria-current={current === id ? "true" : undefined}
@@ -69,7 +70,7 @@ function ConversationList({ current, onPick }: { current: string | null; onPick:
         <Row id={GENERAL} title="Kênh chung" unread={general?.unread ?? 0}
           sub={general?.last_text ?? `${onlineCount} người đang online`}
           avatar={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[rgba(var(--ink-rgb),0.08)]"><Hash className="h-4 w-4" /></span>} />
-        <div className="px-2.5 pb-1 pt-3 text-[12px] font-semibold text-[var(--ink-3)]">Đồng nghiệp · {onlineCount} online</div>
+        <div className="px-2.5 pb-1 pt-3 text-[12px] font-semibold text-[var(--ink-3)]">Đồng nghiệp · {othersOnline} online</div>
         {people.map(({ u, ch }) => (
           <Row key={u.id} id={dmChannel(me!.id, u.id)} title={u.full_name} unread={ch?.unread ?? 0}
             sub={ch?.last_text ? `${ch.last_user_id === me!.id ? "Bạn: " : ""}${ch.last_text}` : online.has(u.id) ? "Đang online" : (u.title ?? lastSeenText(presence.seen[u.id]))}
