@@ -100,7 +100,9 @@ Ngoài ra: `:focus-visible` viền ngọc 2px trên mọi phần tử; nút ch�
 - **Vùng bấm 44px:** nút (kể cả `size="sm"`), nút tròn, tab, nút Đạt / Không đạt.
 - **Thao tác chính của trang dài nổi ở đáy, ngay trên dock** (vd. Lưu nháp / Nộp soát xét khi nhập biên bản). Dùng lớp kính `.glass`, `sticky bottom-[84px]`; từ 640px trở lên thanh này nằm yên ở chỗ cũ.
 - **Tờ A4** (GCN, phiếu tiếp nhận) tự co cho vừa màn hình; khi in vẫn đúng khổ.
-- **Thanh trên** chỉ giữ: logo + tên ngắn, chat, thông báo, tài khoản (có chấm trạng thái online). Tra cứu và đổi sáng/tối nằm trong menu tài khoản.
+- **Điện thoại làm được mọi việc như máy tính** (tiếp nhận đơn, phân công, nhập biên bản, soát xét, ký phát hành, trả thiết bị, chat, nhờ đồng nghiệp): không ẩn chức năng nào, chỉ đổi cách bày. Mọi luồng e2e chạy ở cả hai cỡ (`npx playwright test` có dự án `may-tinh` và `dien-thoai`; máy chủ: `npm run test:e2e:server:phone`).
+- **Thanh trên** chỉ giữ: logo + tên ngắn, số đồng nghiệp online, chat, thông báo, tài khoản (có chấm trạng thái online). Tra cứu và đổi sáng/tối nằm trong menu tài khoản.
+- Trong lưới/flex, thẻ và ô nhập có `min-width: 0` để tên dài (khách hàng…) không đẩy trang rộng hơn màn hình.
 - Kiểm thử: `tests/e2e/mobile.spec.ts`. Không trang nào được cuộn ngang ở 390px.
 
 ## Không làm (hallmark / taste-skill)

@@ -8,6 +8,8 @@ async function loginAs(page: Page, name: string) {
   // đăng xuất chắc chắn (xoá người dùng đã nhớ) rồi mới chọn người
   await page.goto("/#/login");
   await page.evaluate(() => localStorage.removeItem("managercal.user"));
+  // chế độ demo ghi xuống IndexedDB ngay sau thao tác; chờ ghi xong rồi mới tải lại trang
+  await page.waitForTimeout(400);
   await page.reload();
   await page.getByRole("button", { name: new RegExp(name) }).click();
   await expect(page).toHaveURL(/#\/$/);
@@ -100,7 +102,10 @@ test("tiếp nhận đơn từ thiết bị đã có của khách → sinh phi�
   await expect(page.locator("main").getByText("Chờ phân công")).toHaveCount(2);
 });
 
-test("chat nội bộ: nhờ soát xét từ trang phiếu → người nhận thấy ngay ở tab khác, bấm Nhận", async ({ context }) => {
+// Máy tính: chat là khung trượt bên phải; điện thoại: trang /chat riêng
+const chatArea = (page: Page, phone: boolean) => (phone ? page.locator("main") : page.getByRole("dialog", { name: "Trao đổi nội bộ" }));
+
+test("chat nội bộ: nhờ soát xét từ trang phiếu → người nhận thấy ngay ở tab khác, bấm Nhận", async ({ context, isMobile }) => {
   const errors: string[] = [];
   const a = await context.newPage();
   a.on("pageerror", (e) => errors.push(e.message));
@@ -127,7 +132,7 @@ test("chat nội bộ: nhờ soát xét từ trang phiếu → người nhận t
   const chatBtn = b.getByRole("button", { name: /Trao đổi nội bộ, \d+ tin chưa đọc/ });
   await expect(chatBtn).toBeVisible({ timeout: 10_000 });
   await chatBtn.click();
-  const panel = b.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  const panel = chatArea(b, isMobile);
   await panel.getByRole("button", { name: /Lê Minh Cường/ }).click();
   await expect(panel.getByText(`Nhờ anh/chị soát xét giúp phiếu ${code} với ạ.`, { exact: true })).toBeVisible();
   await panel.getByRole("button", { name: "Nhận", exact: true }).last().click();
@@ -135,8 +140,9 @@ test("chat nội bộ: nhờ soát xét từ trang phiếu → người nhận t
 
   // Cường thấy trả lời; gõ mã phiếu trong tin → thành thẻ trích dẫn
   await a.bringToFront();
-  const pa = a.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  const pa = chatArea(a, isMobile);
   await expect(pa.getByText(/Đã nhận, mình xem ngay/).last()).toBeVisible({ timeout: 10_000 });
+  await expect(pa.getByLabel("Nội dung tin nhắn")).toHaveAttribute("placeholder", /Phạm Thu Dung/);
   await pa.getByLabel("Nội dung tin nhắn").fill(`Cảm ơn chị, phiếu ${code} em nộp rồi ạ`);
   await a.keyboard.press("Enter");
   await expect(pa.getByRole("link", { name: new RegExp(code) }).last()).toBeVisible();

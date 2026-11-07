@@ -15,5 +15,10 @@ export default defineConfig({
     trace: "off",
     launchOptions: existsSync(PRESET) ? { executablePath: PRESET } : {},
   },
+  // Mọi luồng nghiệp vụ chạy hai lần: máy tính và điện thoại (390 × 844, cảm ứng) – điện thoại làm được mọi việc
+  projects: [
+    { name: "may-tinh", testIgnore: /mobile\.spec/ },
+    { name: "dien-thoai", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+  ],
   webServer: { command: "npx vite --port 4199 --strictPort", url: "http://localhost:4199", reuseExistingServer: true, timeout: 60_000 },
 });

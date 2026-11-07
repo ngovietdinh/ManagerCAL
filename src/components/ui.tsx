@@ -58,7 +58,7 @@ export function Field({ label, hint, error, children, className }: { label?: Rea
   const msgId = hint || error ? `${id}-msg` : undefined;
   return (
     <FieldCtx.Provider value={{ id, describedBy: msgId }}>
-      <div className={className}>
+      <div className={clsx("min-w-0", className)}>
         {label && <label className="label" htmlFor={id}>{label}</label>}
         {children}
         {hint && !error && <p id={msgId} className="mt-1 text-xs text-slate-500">{hint}</p>}
@@ -160,7 +160,7 @@ export function SearchSelect<T extends { id: string }>({
     return items.filter((i) => !k || norm(getLabel(i) + " " + (getSub?.(i) ?? "")).includes(k)).slice(0, 100);
   }, [items, q, getLabel, getSub]);
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative min-w-0" ref={ref}>
       <button type="button" disabled={disabled} onClick={() => setOpen((o) => !o)} className="input flex items-center justify-between text-left">
         <span className={clsx("truncate", !selected && "text-slate-400")}>{selected ? getLabel(selected) : placeholder}</span>
         {allowClear && selected && !disabled && (
@@ -344,7 +344,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: {
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-[rgba(20,16,12,0.38)] backdrop-blur-[3px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" className={clsx("rise flex max-h-[92vh] w-full flex-col rounded-t-[22px] border border-[var(--edge)] bg-[var(--card-solid)] shadow-[0_24px_60px_rgba(var(--sh),0.28)] sm:rounded-[22px]",
+      <div role="dialog" aria-modal="true" className={clsx("rise flex max-h-[92dvh] w-full min-w-0 max-w-full flex-col rounded-t-[22px] border border-[var(--edge)] bg-[var(--card-solid)] shadow-[0_24px_60px_rgba(var(--sh),0.28)] sm:rounded-[22px]",
         size === "sm" && "sm:max-w-sm", size === "md" && "sm:max-w-lg", size === "lg" && "sm:max-w-3xl", size === "xl" && "sm:max-w-6xl")}>
         <div className="flex items-center justify-between gap-3 px-6 pb-2 pt-5">
           <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>

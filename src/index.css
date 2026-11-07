@@ -175,6 +175,7 @@ body {
 
   /* thẻ nội dung – vật liệu đục, viền sáng mép trên */
   .card {
+    min-width: 0; /* trong lưới/flex: không để nội dung dài (tên khách…) đẩy thẻ rộng hơn màn hình */
     border-radius: var(--radius-card);
     background: var(--card);
     border: 1px solid var(--edge);
@@ -260,7 +261,7 @@ body {
    * từ tiêu đề cột (data-label do useCardTables gán). Bảng số liệu (biên bản, mẫu biên bản) dùng .table--grid để giữ dạng lưới.
    */
   @media (max-width: 639.98px) {
-    .table:not(.table--grid) { display: block; }
+    .table:not(.table--grid) { display: block; min-width: 0; max-width: 100%; }
     .table:not(.table--grid) thead { display: none; }
     .table:not(.table--grid) tbody { display: block; }
     .table:not(.table--grid) tbody tr {

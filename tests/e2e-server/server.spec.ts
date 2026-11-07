@@ -119,7 +119,7 @@ test("quản trị đặt mật khẩu cho nhân viên mới, nhân viên đăng
   await login(page, ADMIN.email);
   await page.goto("/#/staff");
   await page.getByRole("button", { name: "Thêm nhân sự" }).click();
-  const dlg = page.locator("[class*='max-h-[92vh]']").last();
+  const dlg = page.getByRole("dialog").last();
   await dlg.getByLabel("Mã nhân viên").fill("NV99");
   await dlg.getByLabel("Họ tên").fill("Ngô Thị Mới");
   await dlg.getByLabel("Email").fill("moi@congty.vn");
@@ -136,9 +136,10 @@ test("quản trị đặt mật khẩu cho nhân viên mới, nhân viên đăng
   await expect(page.locator("header").getByText("Ngô Thị Mới")).toBeVisible();
 });
 
-test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu đến ngay không cần tải lại", async ({ browser }) => {
-  const ca = await browser.newContext();
-  const cb = await browser.newContext();
+test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu đến ngay không cần tải lại", async ({ browser, isMobile, viewport }) => {
+  const opts = { viewport, isMobile, hasTouch: isMobile };
+  const ca = await browser.newContext(opts);
+  const cb = await browser.newContext(opts);
   const a = await ca.newPage();
   const b = await cb.newPage();
   await login(a, "cuong@kdqtviet.vn");
@@ -150,6 +151,7 @@ test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu
   // Cường nhắn riêng cho Dung
   await a.goto("/#/chat");
   await a.locator("main").getByRole("button", { name: /Phạm Thu Dung/ }).first().click();
+  await expect(a.getByLabel("Nội dung tin nhắn")).toHaveAttribute("placeholder", /Phạm Thu Dung/);
   await a.getByLabel("Nội dung tin nhắn").fill("Chị ơi em gửi biên bản COD rồi nhé");
   await a.keyboard.press("Enter");
   await expect(a.getByText("Chị ơi em gửi biên bản COD rồi nhé", { exact: true })).toBeVisible();
@@ -158,12 +160,13 @@ test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu
   const chatBtn = b.getByRole("button", { name: /Trao đổi nội bộ, \d+ tin chưa đọc/ });
   await expect(chatBtn).toBeVisible({ timeout: 10_000 });
   await chatBtn.click();
-  const panel = b.getByRole("dialog", { name: "Trao đổi nội bộ" });
+  // máy tính: khung chat trượt; điện thoại: trang chat
+  const panel = isMobile ? b.locator("main") : b.getByRole("dialog", { name: "Trao đổi nội bộ" });
   await panel.getByRole("button", { name: /Lê Minh Cường/ }).click();
   await expect(panel.getByText("Chị ơi em gửi biên bản COD rồi nhé", { exact: true })).toBeVisible();
 
   // Dung đang xem danh sách phiếu; Cường nộp một phiếu → trạng thái ở trình duyệt của Dung đổi ngay
-  await panel.getByRole("button", { name: "Đóng khung chat" }).click();
+  if (!isMobile) await panel.getByRole("button", { name: "Đóng khung chat" }).click();
   await b.goto("/#/jobs");
   await a.goto("/#/jobs");
   await a.locator("tr", { hasText: "KCN Tân Phú Thịnh" }).filter({ hasText: "Đã phân công" }).first().click();

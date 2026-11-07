@@ -56,12 +56,18 @@ function OnlineStack() {
   const label = linkStatus === "offline" ? "Mất kết nối đồng bộ – đang thử lại" : others.length ? `${others.length} đồng nghiệp đang online: ${others.map((u) => u.full_name).join(", ")}` : "Chưa có đồng nghiệp nào online";
   return (
     <button type="button" onClick={() => openChat()} title={label} aria-label={label}
-      className="hidden h-[38px] items-center gap-2 rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] pl-1.5 pr-3 text-[13px] lg:flex">
-      <span className="flex items-center gap-1">
+      className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[rgba(var(--hi),calc(0.32*var(--gk)))] bg-[rgba(var(--hi),calc(0.16*var(--gk)))] text-[13px] lg:flex lg:h-[38px] lg:w-auto lg:items-center lg:gap-2 lg:pl-1.5 lg:pr-3">
+      {/* điện thoại: biểu tượng + số người online */}
+      <UsersRound className="h-[18px] w-[18px] lg:hidden" />
+      <span className={clsx("absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full px-1 text-center text-[11px] font-semibold leading-[18px] text-white lg:hidden", linkStatus === "offline" ? "bg-[#c8352b]" : "bg-[#0e7d57]")}>
+        {linkStatus === "offline" ? "!" : others.length}
+      </span>
+      {/* máy tính: ảnh đại diện từng người */}
+      <span className="hidden items-center gap-1 lg:flex">
         {others.slice(0, 4).map((u) => <PresenceAvatar key={u.id} user={u} online size={26} />)}
         {!others.length && <span className={clsx("ml-1.5 h-2 w-2 rounded-full", linkStatus === "offline" ? "bg-[#c8352b]" : "bg-[#12a26f]")} aria-hidden />}
       </span>
-      <span className="whitespace-nowrap tabular-nums">{linkStatus === "offline" ? "Mất kết nối" : others.length > 4 ? `+${others.length - 4} online` : `${others.length} online`}</span>
+      <span className="hidden whitespace-nowrap tabular-nums lg:inline">{linkStatus === "offline" ? "Mất kết nối" : others.length > 4 ? `+${others.length - 4} online` : `${others.length} online`}</span>
     </button>
   );
 }
@@ -148,8 +154,8 @@ function Layout() {
   return (
     <div className="min-h-dvh">
       {/* thanh trên – kính, dạng viên thuốc */}
-      <header className="glass no-print fixed inset-x-3 top-3 z-40 flex h-[58px] items-center gap-3 rounded-[20px] px-2.5 lg:inset-x-4">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-full pr-2">
+      <header className="glass no-print fixed inset-x-3 top-3 z-40 flex h-[58px] items-center gap-1 sm:gap-3 rounded-[20px] px-2.5 lg:inset-x-4">
+        <Link to="/" className="flex min-w-0 items-center gap-2 rounded-full pr-1 sm:gap-2.5 sm:pr-2">
           <img src="./icons/icon.svg" alt="" className="h-10 w-10 shrink-0 rounded-full border-2 border-[rgba(var(--hi),calc(0.9*var(--gk)))] shadow-[0_2px_8px_rgba(var(--sh),0.18)]" />
           <span className="flex min-w-0 flex-col leading-tight">
             <b className="truncate text-sm font-semibold">{company?.short_name || company?.name || "ManagerCAL"}</b>
@@ -165,7 +171,7 @@ function Layout() {
           <span className="lg:max-xl:hidden"><Clock /></span>
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <OnlineStack />
           <Link to="/lookup" className="round hidden sm:grid" aria-label="Tra cứu GCN công khai" title="Tra cứu GCN công khai"><Search className="h-[17px] w-[17px]" /></Link>
           <button type="button" className="round hidden sm:grid" onClick={toggle} aria-label={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>

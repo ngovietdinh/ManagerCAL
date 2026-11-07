@@ -11,7 +11,8 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: "http://localhost:8788",
-    viewport: { width: 1280, height: 800 },
+    // E2E_PHONE=1: chạy cùng các luồng ở cỡ điện thoại (npm run test:e2e:server:phone)
+    ...(process.env.E2E_PHONE ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 800 } }),
     trace: "off",
     launchOptions: existsSync(PRESET) ? { executablePath: PRESET } : {},
   },

@@ -7,12 +7,14 @@ test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true
 async function loginAs(page: Page, name: string) {
   await page.goto("/#/login");
   await page.evaluate(() => localStorage.removeItem("managercal.user"));
+  // chế độ demo ghi xuống IndexedDB ngay sau thao tác; chờ ghi xong rồi mới tải lại trang
+  await page.waitForTimeout(400);
   await page.reload();
   await page.getByRole("button", { name: new RegExp(name) }).click();
   await expect(page).toHaveURL(/#\/$/);
 }
 
-const PAGES = ["/", "/jobs", "/orders", "/orders/new", "/certificates", "/customers", "/devices", "/standards", "/seals", "/catalog", "/staff", "/reports", "/settings", "/audit", "/notifications", "/chat"];
+const PAGES = ["/", "/jobs", "/orders", "/orders/new", "/orders/new?customer=c-5", "/certificates", "/customers", "/devices", "/standards", "/seals", "/catalog", "/staff", "/reports", "/settings", "/audit", "/notifications", "/chat"];
 
 test("mọi trang vừa khung điện thoại, không cuộn ngang", async ({ page }) => {
   const errors: string[] = [];
