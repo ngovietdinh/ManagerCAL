@@ -150,7 +150,7 @@ export default function Dashboard() {
       <section className="gc gc--bank rise col-span-12 flex flex-col p-5 xl:col-span-4" style={{ animationDelay: "70ms" }}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 text-[13px] font-semibold"><span className="gx-ico"><ClipboardList className="h-[17px] w-[17px]" /></span>Việc của tôi</div>
-          <Link to="/jobs?mine=1" className="inline-flex min-h-8 items-center gap-1 rounded-full bg-white/12 px-3 text-xs font-semibold hover:bg-white/20">Tất cả <ArrowRight className="h-3.5 w-3.5" /></Link>
+          <Link to="/jobs?mine=1" className="inline-flex min-h-10 items-center gap-1 rounded-full bg-white/12 px-3 text-xs font-semibold hover:bg-white/20 sm:min-h-8">Tất cả <ArrowRight className="h-3.5 w-3.5" /></Link>
         </div>
         {myWork.length === 0 ? (
           <p className="mt-6 text-sm text-white/80">Không có việc nào đang chờ bạn.</p>
@@ -191,11 +191,11 @@ export default function Dashboard() {
       <section className="gc rise col-span-12 p-5 xl:col-span-7" style={{ animationDelay: "320ms" }}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-[15px] font-semibold">Phiếu theo bước</h2>
-          <Link to="/jobs" className="link text-[13px]">Mở bảng phiếu</Link>
+          <Link to="/jobs" className="link inline-flex min-h-10 items-center text-[13px] sm:min-h-0">Mở bảng phiếu</Link>
         </div>
         <div className="space-y-2.5">
           {s.byStatus.map(({ st, n }) => (
-            <Link key={st} to={`/jobs?status=${st}`} className="grid grid-cols-[150px_1fr_40px] items-center gap-3 rounded-xl hover:bg-[rgba(var(--ink-rgb),0.03)]">
+            <Link key={st} to={`/jobs?status=${st}`} className="grid min-h-11 grid-cols-[120px_1fr_32px] items-center gap-3 rounded-xl hover:bg-[rgba(var(--ink-rgb),0.03)] sm:min-h-0 sm:grid-cols-[150px_1fr_40px]">
               <span className="text-[13px] font-medium">{JOB_STATUS_LABEL[st]}</span>
               <span className="relative h-7 overflow-hidden rounded-[9px] bg-[rgba(var(--ink-rgb),0.06)]">
                 <span className={clsx("absolute inset-y-1 left-1 rounded-[7px]", st === "approval" || st === "review" ? "bg-[var(--c3)]" : "bg-[var(--c1)]")}
@@ -228,7 +228,7 @@ export default function Dashboard() {
       <section className="gc rise col-span-12 p-0" style={{ animationDelay: "420ms" }}>
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
           <h2 className="text-[15px] font-semibold">Thiết bị của khách sắp đến hạn</h2>
-          <Link to="/devices?due=1" className="link text-[13px]">Xem tất cả</Link>
+          <Link to="/devices?due=1" className="link inline-flex min-h-10 items-center text-[13px] sm:min-h-0">Xem tất cả</Link>
         </div>
         {s.due.length === 0 ? <p className="px-5 pb-5 text-sm text-[var(--ink-3)]">Không có thiết bị nào đến hạn trong 30 ngày tới.</p> : (
           <div className="table-wrap px-2 pb-2">

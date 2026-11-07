@@ -98,7 +98,7 @@ export default function Jobs() {
           <div className="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
             {([["table", Table2, "Bảng"], ["kanban", Columns3, "Kanban"]] as const).map(([v, Icon, label]) => (
               <button key={v} type="button" onClick={() => setView(v)} aria-label={label} title={label}
-                className={clsx("flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium", view === v ? "bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200" : "text-slate-600 dark:text-slate-300")}>
+                className={clsx("flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium sm:h-8", view === v ? "bg-brand-50 text-brand-800 dark:bg-brand-900/40 dark:text-brand-200" : "text-slate-600 dark:text-slate-300")}>
                 <Icon className="h-4 w-4" />{label}
               </button>
             ))}
@@ -106,8 +106,8 @@ export default function Jobs() {
         </>}
       />
 
-      <div className="mb-4 grid gap-2 md:grid-cols-6">
-        <Input placeholder="Tìm mã phiếu, khách, thiết bị, sê-ri…" value={q} onChange={(e) => setQ(e.target.value)} className="md:col-span-2" />
+      <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-6">
+        <Input placeholder="Tìm mã phiếu, khách, thiết bị, sê-ri…" value={q} onChange={(e) => setQ(e.target.value)} className="col-span-2" />
         <Select value={status} onChange={(e) => setParam("status", e.target.value)}>
           <option value="">Mọi trạng thái</option>
           {JOB_STATUSES.map((s) => <option key={s} value={s}>{JOB_STATUS_LABEL[s]}{counts[s] ? ` (${counts[s]})` : ""}</option>)}
@@ -120,7 +120,7 @@ export default function Jobs() {
           <option value="">Mọi kiểm định viên</option>
           {technicians.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
         </Select>
-        <div className="flex items-center gap-3">
+        <div className="flex min-h-10 items-center gap-3">
           <Checkbox checked={mine} onChange={setMine} label="Việc của tôi" />
           {orderId && <Button size="sm" variant="ghost" onClick={() => setParam("order", "")}>Bỏ lọc đơn</Button>}
         </div>

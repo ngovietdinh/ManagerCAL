@@ -141,7 +141,7 @@ export function StorageCard() {
           </p>
         </div>
         <div className="table-wrap">
-          <table className="table">
+          <table className="table table--grid">
             <thead><tr><th>Bảng</th><th className="num">Số dòng</th><th className="num">Dữ liệu</th><th className="num">30 ngày qua</th></tr></thead>
             <tbody>
               {top.map((t) => (

@@ -309,9 +309,9 @@ export function MonthPicker({ value, onChange }: { value: string; onChange: (m: 
   const shift = (n: number) => onChange(dayjs(value + "-01").add(n, "month").format("YYYY-MM"));
   return (
     <div className="inline-flex min-h-10 items-center rounded-full border border-[var(--line-2)] bg-[rgba(var(--hi),calc(0.85*var(--gk)))] px-1">
-      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(-1)} aria-label="Tháng trước"><ChevronLeft className="h-4 w-4" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)] sm:h-8 sm:w-8" onClick={() => shift(-1)} aria-label="Tháng trước"><ChevronLeft className="h-4 w-4" /></button>
       <input type="month" value={value} onChange={(e) => e.target.value && onChange(e.target.value)} className="w-36 bg-transparent py-1.5 text-center text-sm outline-none" />
-      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(1)} aria-label="Tháng sau"><ChevronRight className="h-4 w-4" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)] sm:h-8 sm:w-8" onClick={() => shift(1)} aria-label="Tháng sau"><ChevronRight className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -320,9 +320,9 @@ export function DateNav({ value, onChange }: { value: string; onChange: (d: stri
   const shift = (n: number) => onChange(dayjs(value).add(n, "day").format("YYYY-MM-DD"));
   return (
     <div className="inline-flex min-h-10 items-center rounded-full border border-[var(--line-2)] bg-[rgba(var(--hi),calc(0.85*var(--gk)))] px-1">
-      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(-1)} aria-label="Hôm trước"><ChevronLeft className="h-4 w-4" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)] sm:h-8 sm:w-8" onClick={() => shift(-1)} aria-label="Hôm trước"><ChevronLeft className="h-4 w-4" /></button>
       <input type="date" value={value} onChange={(e) => e.target.value && onChange(e.target.value)} className="bg-transparent py-1.5 text-center text-sm outline-none" />
-      <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)]" onClick={() => shift(1)} aria-label="Hôm sau"><ChevronRight className="h-4 w-4" /></button>
+      <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-[rgba(var(--ink-rgb),0.06)] sm:h-8 sm:w-8" onClick={() => shift(1)} aria-label="Hôm sau"><ChevronRight className="h-4 w-4" /></button>
     </div>
   );
 }

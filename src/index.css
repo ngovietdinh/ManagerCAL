@@ -255,6 +255,44 @@ body {
   .nowrap, .table td.code { @apply whitespace-nowrap; }
   .table-wrap { @apply overflow-x-auto; }
 
+  /*
+   * Điện thoại: bảng danh sách thành thẻ – ô đầu là tiêu đề (cả dòng), các ô khác xếp 2 cột kèm nhãn lấy
+   * từ tiêu đề cột (data-label do useCardTables gán). Bảng số liệu (biên bản, mẫu biên bản) dùng .table--grid để giữ dạng lưới.
+   */
+  @media (max-width: 639.98px) {
+    .table:not(.table--grid) { display: block; }
+    .table:not(.table--grid) thead { display: none; }
+    .table:not(.table--grid) tbody { display: block; }
+    .table:not(.table--grid) tbody tr {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; position: relative;
+      padding: 14px 16px; border-bottom: 1px solid var(--line);
+    }
+    .table:not(.table--grid) tbody tr:last-child { border-bottom: 0; }
+    .table:not(.table--grid) tbody tr:hover td { background: transparent; }
+    .table:not(.table--grid) tbody td { display: block; min-width: 0 !important; max-width: none !important; padding: 0; border: 0; text-align: left !important; white-space: normal !important; }
+    .table:not(.table--grid) tbody td[data-label]::before {
+      content: attr(data-label); display: block; margin-bottom: 1px; font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--ink-3);
+    }
+    /* ô tiêu đề của thẻ */
+    .table:not(.table--grid) tbody td.cell-main { grid-column: 1 / -1; font-size: 15px; font-weight: 600; padding-right: 40px; }
+    .table:not(.table--grid) tbody td.cell-main::before { display: none; }
+    /* ô chọn: góc phải trên, vùng bấm 44px */
+    .table:not(.table--grid) tbody td.cell-check { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 44px; height: 44px; }
+    .table:not(.table--grid) tbody td.cell-check input { width: 22px !important; height: 22px !important; }
+    .table:not(.table--grid) tbody td.cell-check::before { display: none; }
+    /* nút thao tác: cả dòng, căn trái */
+    .table:not(.table--grid) tbody td.cell-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+    .table:not(.table--grid) tbody td.cell-actions::before { display: none; }
+    .table:not(.table--grid) tbody td.cell-wide { grid-column: 1 / -1; }
+    /* nhiều ô nhập trong một ô (các lần đọc): xếp hàng ngang */
+    .table:not(.table--grid) tbody td.cell-wide > div { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    /* ô trống ("–") không chiếm chỗ */
+    .table:not(.table--grid) tbody td.cell-empty { display: none; }
+    /* dòng thông báo trống (colSpan) */
+    .table:not(.table--grid) tbody td[colspan] { grid-column: 1 / -1; }
+    .card:has(> .table:not(.table--grid)), .table-wrap:has(> .table:not(.table--grid)) { overflow: visible; }
+  }
+
   /* Tờ tài liệu in (GCN, thông báo, phiếu tiếp nhận): khổ A4, Times, góc vuông như giấy thật */
   .doc {
     font-family: var(--font-doc); color: #000; background: #fff; width: 210mm; min-height: 296mm; padding: 18mm 20mm 18mm 25mm;
@@ -280,10 +318,18 @@ body {
 @media (prefers-reduced-transparency: reduce) {
   .glass, .gc { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card-solid) !important; }
 }
-/* HIG: vùng bấm ≥ 44px trên màn hình cảm ứng */
-@media (pointer: coarse) {
-  .btn { min-height: 44px; }
+/* HIG: vùng bấm ≥ 44px trên màn hình cảm ứng / điện thoại (thắng cả lớp tiện ích min-h-8 của nút nhỏ) */
+@media (pointer: coarse), (max-width: 639.98px) {
+  .btn { min-height: 44px !important; }
   .round { width: 44px; height: 44px; }
+  [role="tab"] { min-height: 40px !important; }
+}
+@media (max-width: 639.98px) {
+  /* iPhone tự phóng to trang khi gõ vào ô chữ nhỏ hơn 16px */
+  .input, .input-sm, select.input, textarea.input { font-size: 16px; }
+  .input-sm { min-height: 44px; }
+  .gx-big { font-size: 26px; }
+  .gx-big small { font-size: 13px; }
 }
 @media (prefers-contrast: more) {
   :root { --ink-3: rgba(var(--ink-rgb), 0.85); --line: rgba(var(--ink-rgb), 0.25); --line-2: rgba(var(--ink-rgb), 0.35); }
@@ -295,6 +341,6 @@ body {
   main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
   .app-main { padding: 0 !important; margin: 0 !important; }
   .overflow-x-auto, .table-wrap { overflow: visible !important; }
-  .doc { box-shadow: none !important; margin: 0; width: auto; min-height: auto; padding: 0; font-size: 12pt; line-height: 1.35; }
+  .doc { box-shadow: none !important; margin: 0; width: auto; min-height: auto; padding: 0; font-size: 12pt; line-height: 1.35; zoom: 1 !important; }
   @page { size: A4; margin: 15mm 18mm 15mm 22mm; }
 }

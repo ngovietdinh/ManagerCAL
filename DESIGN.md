@@ -93,6 +93,16 @@ Chỉ `transform`, `opacity`, màu; ease-out `cubic-bezier(.2,.8,.2,1)`; nhấn 
 
 Ngoài ra: `:focus-visible` viền ngọc 2px trên mọi phần tử; nút chỉ có biểu tượng phải có `aria-label`; `prefers-contrast: more` làm đậm viền và chữ phụ.
 
+## Điện thoại (< 640px)
+
+- **Bảng → thẻ, tự động:** mọi `.table` trên điện thoại hiển thị thành thẻ. Ô có chữ đầu tiên là tiêu đề thẻ; các ô còn lại xếp 2 cột, kèm nhãn lấy từ tiêu đề cột (`useCardTables` gán `data-label`). Ô chỉ có ô chọn nằm ở góc phải trên, vùng bấm 44px. Ô chỉ có nút thao tác chiếm cả dòng. Ô trống ("–") bị ẩn. Bảng số liệu cần giữ dạng lưới thì thêm `.table--grid` (mẫu biên bản trong Danh mục, bảng dung lượng).
+- **Ô nhập cỡ chữ 16px** để iPhone không tự phóng to khi gõ. Ô số đọc của biên bản cao 44px.
+- **Vùng bấm 44px:** nút (kể cả `size="sm"`), nút tròn, tab, nút Đạt / Không đạt.
+- **Thao tác chính của trang dài nổi ở đáy, ngay trên dock** (vd. Lưu nháp / Nộp soát xét khi nhập biên bản). Dùng lớp kính `.glass`, `sticky bottom-[84px]`; từ 640px trở lên thanh này nằm yên ở chỗ cũ.
+- **Tờ A4** (GCN, phiếu tiếp nhận) tự co cho vừa màn hình; khi in vẫn đúng khổ.
+- **Thanh trên** chỉ giữ: logo + tên ngắn, chat, thông báo, tài khoản (có chấm trạng thái online). Tra cứu và đổi sáng/tối nằm trong menu tài khoản.
+- Kiểm thử: `tests/e2e/mobile.spec.ts`. Không trang nào được cuộn ngang ở 390px.
+
 ## Không làm (hallmark / taste-skill)
 
 Gradient tím–xanh, glow; thẻ KPI có ô biểu tượng màu cầu vồng; sparkline hoặc số liệu bịa; thẻ lồng thẻ; eyebrow chữ in hoa giãn cách; emoji làm biểu tượng; `transition: all`; animate kích thước; chữ chung chung ("Bắt đầu ngay", "Mạnh mẽ") – dùng động từ nghề ("Tiếp nhận đơn mới", "Ký và phát hành").

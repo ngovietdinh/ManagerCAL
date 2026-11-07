@@ -297,10 +297,11 @@ function RecordEditor({ job }: { job: Job }) {
             </div>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" icon={<Save className="h-4 w-4" />} loading={busy === "save"} disabled={busy !== null} onClick={onSave}>Lưu nháp{dirty ? " *" : ""}</Button>
-          <Button icon={<Send className="h-4 w-4" />} loading={busy === "submit"} disabled={busy !== null} onClick={onSubmit}>Nộp soát xét</Button>
-        </div>
+      </div>
+      {/* điện thoại: thanh lưu / nộp nổi ngay trên dock suốt khi cuộn biên bản (thẻ là khung bám) */}
+      <div className="glass sticky bottom-[84px] z-20 mx-auto mt-3 flex w-fit justify-center gap-2 rounded-full p-1.5 sm:static sm:mx-0 sm:w-auto sm:mt-3 sm:justify-end sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
+        <Button variant="secondary" icon={<Save className="h-4 w-4" />} loading={busy === "save"} disabled={busy !== null} onClick={onSave}>Lưu nháp{dirty ? " *" : ""}</Button>
+        <Button icon={<Send className="h-4 w-4" />} loading={busy === "submit"} disabled={busy !== null} onClick={onSubmit}>Nộp soát xét</Button>
       </div>
     </Card>
   );

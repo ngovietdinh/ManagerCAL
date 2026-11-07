@@ -47,7 +47,7 @@ function LibraryBanner() {
   };
   return (
     <div className="card mb-4 flex flex-wrap items-center gap-3 px-5 py-4">
-      <div className="min-w-0 flex-1 text-sm">
+      <div className="min-w-[240px] flex-1 text-sm">
         <div className="font-semibold">Thư viện có {miss.procedures} quy trình, {miss.types} loại phương tiện đo mới chưa có trong danh mục</div>
         <div className="mt-0.5 text-[var(--ink-3)]">{[...new Set(miss.names)].join(", ")}. Chỉ thêm mục còn thiếu, không sửa mục bạn đã chỉnh.</div>
       </div>

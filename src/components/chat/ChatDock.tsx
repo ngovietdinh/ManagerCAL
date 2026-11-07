@@ -1,7 +1,7 @@
 // Ngữ cảnh chat dùng chung cho cả khung ứng dụng: danh sách kênh + số tin chưa đọc (tải một lần),
 // mở khung chat bên phải (máy tính) hoặc trang chat (điện thoại).
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useData } from "@/app/data";
 import type { ChatSummaryItem } from "@/lib/services/chat";
 
@@ -22,6 +22,8 @@ const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min
 export function ChatDockProvider({ children }: { children: ReactNode }) {
   const { svc, versions, me } = useData();
   const nav = useNavigate();
+  const loc = useLocation();
+  const onChatPage = loc.pathname.startsWith("/chat");
   const [summary, setSummary] = useState<ChatSummaryItem[]>([]);
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<string | null>(null);
@@ -37,9 +39,10 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
 
   const openChat = useCallback((c?: string | null) => {
     if (c !== undefined) setChannel(c);
-    if (isDesktop()) setOpen(true);
-    else nav(c ? `/chat/${encodeURIComponent(c)}` : "/chat");
-  }, [nav]);
+    // đang ở trang chat (hoặc điện thoại): chuyển trong trang, không mở thêm khung thứ hai
+    if (isDesktop() && !onChatPage) setOpen(true);
+    else if (c || !onChatPage) nav(c ? `/chat/${encodeURIComponent(c)}` : "/chat");
+  }, [nav, onChatPage]);
 
   const value = useMemo<ChatDockCtx>(() => ({
     summary, unread: summary.reduce((s, x) => s + x.unread, 0), open, channel, setChannel,

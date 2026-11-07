@@ -123,7 +123,7 @@ function ChecklistEditor({ s, values, onCheck, disabled }: { s: Extract<Template
             <div className="inline-flex rounded-lg border border-slate-300 p-0.5 dark:border-slate-700">
               {[true, false].map((val) => (
                 <button key={String(val)} type="button" disabled={disabled} onClick={() => onCheck(it.id, val)}
-                  className={clsx("h-7 rounded-md px-3 text-xs font-medium transition disabled:cursor-not-allowed",
+                  className={clsx("h-10 rounded-md px-4 text-sm font-medium transition disabled:cursor-not-allowed sm:h-7 sm:px-3 sm:text-xs",
                     v === val ? (val ? "bg-emerald-600 text-white" : "bg-red-600 text-white") : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800")}>
                   {val ? "Đạt" : "Không đạt"}
                 </button>

@@ -149,7 +149,7 @@ test("hai trình duyệt: thấy nhau online, tin nhắn và thay đổi phiếu
 
   // Cường nhắn riêng cho Dung
   await a.goto("/#/chat");
-  await a.getByRole("button", { name: /Phạm Thu Dung/ }).first().click();
+  await a.locator("main").getByRole("button", { name: /Phạm Thu Dung/ }).first().click();
   await a.getByLabel("Nội dung tin nhắn").fill("Chị ơi em gửi biên bản COD rồi nhé");
   await a.keyboard.press("Enter");
   await expect(a.getByText("Chị ơi em gửi biên bản COD rồi nhé", { exact: true })).toBeVisible();

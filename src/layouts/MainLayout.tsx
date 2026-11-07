@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useData, useTable } from "@/app/data";
 import { useTheme } from "@/app/theme";
+import { useCardTables } from "@/app/useCardTables";
 import PasswordModal from "@/components/PasswordModal";
 import { Avatar } from "@/components/ui";
 import { ChatDockProvider, useChatDock } from "@/components/chat/ChatDock";
@@ -104,6 +105,7 @@ export default function MainLayout() {
 
 function Layout() {
   const { me, can, logout, mode, linkStatus } = useData();
+  useCardTables();
   const { rows: settings } = useTable("settings");
   const { dark, toggle } = useTheme();
   const [sheet, setSheet] = useState(false);
@@ -151,7 +153,7 @@ function Layout() {
           <img src="./icons/icon.svg" alt="" className="h-10 w-10 shrink-0 rounded-full border-2 border-[rgba(var(--hi),calc(0.9*var(--gk)))] shadow-[0_2px_8px_rgba(var(--sh),0.18)]" />
           <span className="flex min-w-0 flex-col leading-tight">
             <b className="truncate text-sm font-semibold">{company?.short_name || company?.name || "ManagerCAL"}</b>
-            <small className="truncate text-[12px] text-[var(--ink-3)]">Quản lý kiểm định phương tiện đo</small>
+            <small className="hidden truncate text-[12px] text-[var(--ink-3)] sm:block">Quản lý kiểm định phương tiện đo</small>
           </span>
         </Link>
         <div className="flex-1" />
@@ -166,7 +168,7 @@ function Layout() {
         <div className="flex items-center gap-2">
           <OnlineStack />
           <Link to="/lookup" className="round hidden sm:grid" aria-label="Tra cứu GCN công khai" title="Tra cứu GCN công khai"><Search className="h-[17px] w-[17px]" /></Link>
-          <button type="button" className="round" onClick={toggle} aria-label={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>
+          <button type="button" className="round hidden sm:grid" onClick={toggle} aria-label={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} title={dark ? "Giao diện sáng" : "Giao diện tối"}>
             {dark ? <Sun className="h-[17px] w-[17px]" /> : <Moon className="h-[17px] w-[17px]" />}
           </button>
           <ChatButton />
@@ -189,12 +191,15 @@ function Layout() {
                   <div className="truncate text-xs text-[var(--ink-3)]">{me?.roles.map((r) => ROLE_LABEL[r]).join(", ")}</div>
                 </div>
                 {mode === "server" && (
-                  <button type="button" onClick={() => { setMenu(false); setPwOpen(true); }} className="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)]">
+                  <button type="button" onClick={() => { setMenu(false); setPwOpen(true); }} className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)]">
                     <KeyRound className="h-4 w-4" /> Đổi mật khẩu
                   </button>
                 )}
-                <Link to="/lookup" className="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)] sm:hidden"><Search className="h-4 w-4" /> Tra cứu GCN</Link>
-                <button type="button" onClick={logout} className="flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)]">
+                <Link to="/lookup" className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)] sm:hidden"><Search className="h-4 w-4" /> Tra cứu GCN</Link>
+                <button type="button" onClick={toggle} className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)] sm:hidden">
+                  {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} {dark ? "Giao diện sáng" : "Giao diện tối"}
+                </button>
+                <button type="button" onClick={logout} className="flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm hover:bg-[rgba(var(--ink-rgb),0.06)]">
                   <LogOut className="h-4 w-4" /> Đăng xuất
                 </button>
               </div>

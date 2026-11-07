@@ -130,7 +130,7 @@ export default function CatTemplateEditor({ value, onChange }: { value: Template
               </div>
               <MpeEditor value={s.mpe} onChange={(m) => m && setSection(i, { ...s, mpe: m })} />
               {s.directions === 2 && <MpeEditor label="Giới hạn độ trễ (trống = bằng MPE)" allowNone value={s.hysteresis_mpe} onChange={(m) => { const n = { ...s }; if (m) n.hysteresis_mpe = m; else delete n.hysteresis_mpe; setSection(i, n); }} />}
-              <div className="table-wrap"><table className="table">
+              <div className="table-wrap"><table className="table table--grid">
                 <thead><tr><th>Nhãn (tuỳ chọn)</th><th>Giá trị danh định</th><th>MPE riêng (tuỳ chọn)</th><th></th></tr></thead>
                 <tbody>
                   {s.points.map((p, k) => {
