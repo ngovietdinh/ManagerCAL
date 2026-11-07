@@ -329,6 +329,8 @@ body {
   .input, .input-sm, select.input, textarea.input { font-size: 16px; }
   .input-sm { min-height: 44px; }
   .gx-big { font-size: 26px; }
+  /* thanh trên, dock, thanh thao tác nổi: kính đục hơn để chữ cuộn bên dưới không lẫn vào */
+  header.glass, nav.glass, .glass.sticky { background: color-mix(in srgb, var(--card-solid) 86%, transparent); }
   .gx-big small { font-size: 13px; }
 }
 @media (prefers-contrast: more) {
